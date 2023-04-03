@@ -1,0 +1,34 @@
+local typedef EventWindow.SiteNum SiteNum;
+
+/**
+   \symmetry all
+ */
+element Sequence : QBondableT(4u) + QDiffusableT(1000u) {
+  constant QBond.Index cCOMMON = 0u;
+  constant QBond.Index cPREV   = 1u;
+  constant QBond.Index cNEXT   = 2u;
+  constant QBond.Index cAUX    = 3u;
+
+  @Override Void behave() {
+    diffuse();
+  }
+
+  Bool isFirst() {
+    return !getBond(cPREV).isAttached();
+  }
+
+  Bool isLast() {
+    return !getBond(cNEXT).isAttached();
+  }
+
+  @Override ARGB getColor(Unsigned selector) {
+    ColorUtils cu;
+    Bits hex = 0x0000ff00; // green
+    if (isFirst()) {
+      hex = 0x00ff0000;    // red
+    } else if (isLast()) {
+      hex = 0x000000ff;    // blue
+    }
+    return cu.color(hex);
+  }
+}

@@ -1,0 +1,29 @@
+/**
+   \color #0054d2
+   \symmetry all
+ */
+element Membrane : QBondableT(4) + QDiffusableT(100, 2) + QAttractionT(AttractionUtils.cTYPE_MEMBRANE) {
+  constant Bits cCOLOR_DEFAULT = 0x000054d2;
+  constant Bits cCOLOR_DEFECT  = 0x005428c8;
+
+  constant QBond.Index cCOMMON = 0;
+  constant QBond.Index cPREV   = 1;
+  constant QBond.Index cOTHER  = 2;
+  constant QBond.Index cNEXT   = 3;
+
+  @Override Void behave() {
+    diffuse();
+  }
+
+  @Override ARGB getColor(Unsigned selector) {
+    ColorUtils cu;
+    Bits hex = cCOLOR_DEFAULT;
+    if (!getBond(cPREV).isAttached() ||
+        !getBond(cNEXT).isAttached() ||
+        (false && !getBond(cOTHER).isAttached()))
+    {
+      hex = cCOLOR_DEFECT;
+    }
+    return cu.color(hex);
+  }
+}

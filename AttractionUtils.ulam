@@ -1,0 +1,64 @@
+transient AttractionUtils {
+  typedef IAttraction.Attraction Attraction;
+  typedef IAttraction.Type Type;
+
+  constant Type cTYPE_EMPTY    = 0;
+  constant Type cTYPE_DEFAULT  = 1;
+  constant Type cTYPE_MEMBRANE = 2;
+  constant Type cTYPE_CRAWLER  = 3;
+  constant Type cTYPE_INNER    = 4;
+
+  EventWindow ew;
+
+  Attraction getAttraction(Atom& atom1, Atom& atom2) {
+    C2D coord1 = ew.getCoordRaw(ew.getSiteNumber(atom1));
+    C2D coord2 = ew.getCoordRaw(ew.getSiteNumber(atom2));
+    return getAttractionAt(getType(atom1), getType(atom2), coord1.manhattanDistance(coord2));
+  }
+
+  Attraction getAttractionAt(Type type1, Type type2, Unsigned distance) {
+    if (type1 > type2) {
+      Type tmp = type1;
+      type1 = type2;
+      type2 = tmp;
+    }
+
+    if (type1 == cTYPE_DEFAULT) {
+      if (type2 == cTYPE_MEMBRANE) {
+        return (Int) distance - 5;
+      }
+
+    } else if (type1 == cTYPE_MEMBRANE) {
+      if (type2 == cTYPE_MEMBRANE) {
+        if (distance < 3u)
+          return -3;
+        if (distance < 4u)
+          return -1;
+
+      } else if (type2 == cTYPE_INNER) {
+        return -(((Int) distance - 5) * ((Int) distance - 5));
+      }
+
+    } else if (type1 == cTYPE_CRAWLER) {
+      // not affected
+
+    } else if (type1 == cTYPE_INNER) {
+      if (type2 == cTYPE_INNER) {
+        if (distance < 2u)
+          return -1;
+        if (distance > 3u)
+          return 1;
+      }
+    }
+
+    return 0;
+  }
+
+  Type getType(Atom& atom) {
+    if (atom as IAttraction)
+      return atom.getType();
+
+    AtomUtils au;
+    return au.isEmpty(atom) ? cTYPE_EMPTY : cTYPE_DEFAULT;
+  }
+}

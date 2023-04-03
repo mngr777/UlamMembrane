@@ -1,0 +1,63 @@
+quark QBondableT(Unsigned(3) cMAX_BOND_NUM, Unsigned(3) cMAX_DIST = 4) : IBondable + Fail {
+  typedef EventWindow.SiteNum SiteNum;
+
+  QBond mBonds[cMAX_BOND_NUM];
+
+  virtual Unsigned getMaxDist() {
+    return cMAX_DIST;
+  }
+
+  @Override QBond.Num getBondNum() {
+    return cMAX_BOND_NUM;
+  }
+
+  @Override QBond.Num getAttachedBondNum() {
+    QBond.Num num = 0;
+    for (QBond.Num i = 0; i < cMAX_BOND_NUM; i++)
+      if (getBond((QBond.Index) i).isAttached())
+        num++;
+    return num;
+  }
+
+  @Override QBond& getBond(QBond.Index index) {
+    if (index >= cMAX_BOND_NUM)
+      fail("TBondable.getBond: index is out of bounds");
+    return mBonds[index];
+  }
+
+  @Override Bool checkBondsForSwap(SiteNum site, SiteNum siteOther) {
+    BondStatus bs;
+    for (QBond.Num i = 0; i < cMAX_BOND_NUM; i++) {
+      if (!bs.isOk(getBond((QBond.Index) i).checkForSwap(site, siteOther)))
+        return false;
+    }
+    return true;
+  }
+
+  @Override Void updateBondsForSwap(SiteNum site, SiteNum siteOther) {
+    for (QBond.Num i = 0; i < cMAX_BOND_NUM; i++)
+      getBond((QBond.Index) i).updateForSwap(site, siteOther);
+  }
+
+  @Override Void renderGraphics() {
+    Drawable drawable;
+    if (!drawable.canDraw())
+      return;
+
+    for (QBond.Num i = 0; i < cMAX_BOND_NUM; i++) {
+      QBond& bond = mBonds[(QBond.Index) i];
+      if (!bond.isAttached())
+        continue;
+
+      EventWindow ew;
+      C2D start;
+      C2D end = ew.getCoordRaw(bond.mSite) * Drawable.cUNITS_PER_SITE / 2;
+
+      ColorUtils cu;
+      ARGB oncol = cu.color(0xffffffff);
+      ARGB offcol = oncol;
+
+      drawable.drawMaskedLine(start, end, oncol, offcol, 0xffffffff);
+    }
+  }
+}

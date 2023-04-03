@@ -1,0 +1,17 @@
+transient BondStatus {
+  typedef Unsigned(4) Status;
+
+  constant Status cOK                     = 0;
+  constant Status cERROR                  = 1;
+  constant Status cINACCESSIBLE           = 2;
+  constant Status cNOT_ATTACHED           = 3;
+  constant Status cIS_ATTACHED            = 4;
+  constant Status cOTHER_IS_ATTACHED      = 5;
+  constant Status cNOT_BONDABLE           = 6;
+  constant Status cDISTANCE_EXCEEDS_MAX   = 7;
+  constant Status cNO_NEXT                = 8;
+
+  Bool isOk(Status status) {
+    return status == cOK;
+  }
+}

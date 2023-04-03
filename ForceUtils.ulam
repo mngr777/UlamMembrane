@@ -1,0 +1,52 @@
+local typedef EventWindow.SiteNum SiteNum;
+local typedef IAttraction.Attraction Attraction;
+
+transient ForceUtils {
+  EventWindow ew;
+
+  // NOTE: at origin
+  C2D force() {
+    return attractionForce() + bondForce();
+  }
+
+  C2D attractionForce() {
+    AttractionUtils atu;
+    EventWindow ew;
+    MDist mdist;
+
+    C2D force;
+    for (Int i = 1; i <= mdist.getLastIndex(4); i++) {
+      SiteNum site = (SiteNum) i;
+      Attraction attraction = atu.getAttraction(ew[0], ew[site]);
+      if (attraction != 0) {
+        C2D coord = ew.getCoordRaw(site);
+        if (attraction > 0) {
+          force += (coord * (C2D.Coord) attraction) / (C2D.Coord) coord.length();
+        } else {
+          force -= (coord * (C2D.Coord) -attraction) / (C2D.Coord) coord.length();
+        }
+      }
+    }
+    return force;
+  }
+
+  C2D bondForce() {
+    C2D force;
+    if (!(ew[0] is IBondable))
+      return force;
+
+    IBondable& bondable = (IBondable&) ew[0];
+    for (QBond.Num i = 0; i < bondable.getBondNum(); i++) {
+      QBond& bond = bondable.getBond((QBond.Index) i);
+      if (!bond.isAttached())
+        continue;
+
+      C2D coord = bond.getCoord();
+      if (coord.length() < 3u)
+        continue; // not stretched, TODO: set limit for bondable
+
+      force += coord;
+    }
+    return force * 2;
+  }
+}

@@ -1,0 +1,8 @@
+quark IAttraction {
+  typedef Int Attraction;
+  typedef Unsigned Type;
+
+  // constant WindowServices.Radius cATTRACTION_RADIUS_MAX = 2;
+
+  virtual Unsigned getType();
+}

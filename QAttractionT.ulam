@@ -1,0 +1,5 @@
+quark QAttractionT(Unsigned cTYPE) : IAttraction {
+  @Override IAttraction.Type getType() {
+    return cTYPE;
+  }
+}

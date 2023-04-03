@@ -1,0 +1,79 @@
+transient EventWindowMisc {
+  typedef CoordUtils.Orientation Orientation;
+  typedef EventWindow.SiteNum SiteNum;
+  typedef WindowServices.Radius Radius;
+
+  CoordUtils cu;
+  EventWindow ew;
+
+  SiteNum findEmptySite(Radius first, Radius last) {
+    WindowServices ws;
+    ws.reset(first, last);
+    ws.scan(WindowServices.cEMPTY_SITES_HIT);
+    return ws.getPick();
+  }
+
+  SiteNum findEmptySiteAround(Atom& atom, Radius first, Radius last) {
+    return findEmptySiteAround(ew.getSiteNumber(atom), first, last);
+  }
+
+  SiteNum findEmptySiteAround(SiteNum site, Radius first, Radius last) {
+    return findEmptySiteAround(ew.getCoordRaw(site), first, last);
+  }
+
+  SiteNum findEmptySiteAround(C2D coord, Radius first, Radius last) {
+    if (coord.isOrigin())
+      return findEmptySite(first, last);
+
+    WindowServices ws;
+    ws.reset(0, 4); // scan through all window sites
+    for (Int s = ws.next(); s >= 0; s = ws.next()) {
+      SiteNum site = (SiteNum) s;
+      if (!ew.isEmpty(site))
+        continue;
+
+      C2D siteCoord = ew.getCoordRaw(site);
+      Unsigned dist = coord.manhattanDistance(siteCoord);
+      if (first <= dist && dist <= last)
+        ws.hit();
+    }
+    return ws.getPick();
+  }
+
+  SiteNum findEmptySiteOrient(C2D coordOther, Radius first, Radius last, Orientation orientation) {
+    C2D coord;
+    WindowServices ws;
+    ws.reset(first, last);
+    for (Int s = ws.next(); s >= 0; s = ws.next()) {
+      SiteNum site = (SiteNum) s;
+      if (!ew.isEmpty(site))
+        continue;
+
+      C2D coordSite = ew.getCoordRaw(site);
+      Orientation orientSite = cu.orientation(coord, coordOther, coordSite);
+      if (orientSite == orientation)
+        ws.hit();
+    }
+    return ws.getPick();
+  }
+
+  SiteNum findEmptySiteAroundOrient(C2D coord, C2D coordOther, Radius first, Radius last, Orientation orientation) {
+    WindowServices ws;
+    ws.reset(0, 4); // scan through all window sites
+    for (Int s = ws.next(); s >= 0; s = ws.next()) {
+      SiteNum site = (SiteNum) s;
+      if (!ew.isEmpty(site))
+        continue;
+
+      C2D coordSite = ew.getCoordRaw(site);
+      Unsigned dist = coord.manhattanDistance(coordSite);
+      if (last < dist || dist < first)
+        continue;
+
+      Orientation orientSite = cu.orientation(coord, coordOther, coordSite);
+      if (orientSite == orientation)
+        ws.hit();
+    }
+    return ws.getPick();
+  }
+}

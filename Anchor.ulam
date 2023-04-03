@@ -1,0 +1,5 @@
+/**
+   \symbol An
+   \color #205b7c
+ */
+element Anchor: QBondableT(1) {}

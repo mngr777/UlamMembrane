@@ -1,0 +1,63 @@
+local typedef BondStatus BS;
+local typedef EventWindow.SiteNum SiteNum;
+
+transient SequenceBuilder + Fail {
+  typedef QBond.Index Index;
+
+  BondStatus bs;
+  BondUtils bu;
+  EventWindow ew;
+  EventWindowMisc ewm;
+
+  Bool buildNext(Atom& builder, Index index) {
+    return buildNext(builder, index, true);
+  }
+
+  Bool buildNext(Atom& builder, Index index, Bool reverse) {
+    if (!(builder is IBondable))
+      fail("Builder atom is not bondable");
+
+    QBond.Index prevIndex = reverse ? Sequence.cNEXT : Sequence.cPREV;
+    QBond.Index nextIndex = reverse ? Sequence.cPREV : Sequence.cNEXT;
+
+    IBondable& bondable = (IBondable&) builder;
+    QBond& bond = bondable.getBond(index);
+    SiteNum site = ew.getSiteNumber(builder);
+
+    // Build
+    Sequence seq;
+    SiteNum nextSite = ewm.findEmptySiteAround(builder, 1u, bu.maxDist(bondable, seq));
+    if (nextSite == SiteNum.maxof)
+      return false;
+    ew[nextSite] = seq;
+    Sequence& next = (Sequence&) ew[nextSite];
+
+    BS.Status status = BS.cOK;
+
+    if (bond.isAttached()) {
+      // Attach to previous item
+      QBond& prevBond = next.getBond(prevIndex);
+      status = prevBond.attach(nextSite, prevIndex, bond.getSiteNumber(), nextIndex);
+      if (!bs.isOk(status)) {
+        Empty empty;
+        ew[nextSite] = empty;
+        return false;
+      }
+
+      // Move builder to next item
+      status = bu.traverse(site, index, nextIndex);
+      if (!bs.isOk(status))
+        fail("SequenceBuilder.buildNext: failed to traverse to next item");
+
+    } else {
+      // First item, bond to the builder
+      status = bond.attach(site, index, nextSite, Sequence.cCOMMON);
+      if (!bs.isOk(status)) {
+        Empty empty;
+        ew[nextSite] = empty;
+        return false;
+      }
+    }
+    return true;
+  }
+}

@@ -1,0 +1,186 @@
+quark QBond : Fail {
+  typedef BondStatus.Status Status;
+  typedef EventWindow.SiteNum SiteNum;
+  typedef Unsigned(6) Site;
+  typedef Unsigned(2) Index;
+  typedef Unsigned(3) Num;
+
+  constant Num cMAX_NUM = 4;
+  constant Unsigned(3) cMAX_DIST = 4;
+
+  Index mIndex;
+  Site mSite = 0;
+
+  Index getIndex() {
+    return mIndex;
+  }
+
+  SiteNum getSiteNumberRaw() {
+    return mSite;
+  }
+
+  SiteNum getSiteNumber() {
+    // return getSiteNumber(0);
+    EventWindowInverse ewi;
+    return ewi.getSiteNumber(mSite);
+  }
+
+  SiteNum getSiteNumber(SiteNum bondableSite) {
+    EventWindow ew;
+    C2D coord = getCoord(bondableSite);
+    return ew.getSiteNumberRaw(coord);
+  }
+
+  C2D getCoord() {
+    // C2D origin; return getCoord(origin);
+    EventWindowInverse ewi;
+    return ewi.getCoord(mSite);
+  }
+
+  C2D getCoord(SiteNum bondableSite) {
+    EventWindow ew;
+    return getCoord(ew.getCoordRaw(bondableSite));
+  }
+
+  C2D getCoord(C2D bondableCoord) {
+    EventWindowInverse ewi;
+    return bondableCoord + ewi.getCoord(mSite);
+  }
+
+  Bool isAttached() {
+    return mSite != 0;
+  }
+
+  Status attach(Index index, C2D otherCoord, Index otherIndex) {
+    C2D origin;
+    return attach(origin, index, otherCoord, otherIndex);
+  }
+
+  Status attach(C2D coord, Index index, C2D otherCoord, Index otherIndex) {
+    EventWindow ew;
+    return attach(ew.getSiteNumberRaw(coord), index, ew.getSiteNumberRaw(otherCoord), otherIndex);
+  }
+
+  Status attach(Index index, SiteNum otherSite, Index otherIndex) {
+    return attach(0, index, otherSite, otherIndex);
+  }
+
+  Status attach(SiteNum site, Index index, SiteNum otherSite, Index otherIndex) {
+    EventWindow ew;
+
+    if (isAttached())
+      return BondStatus.cIS_ATTACHED;
+
+    if (!ew.isAccessible(site) || !ew.isAccessible(otherSite))
+      return BondStatus.cINACCESSIBLE;
+
+    if (!(ew[site] is IBondable) || !(ew[otherSite] is IBondable)) {
+      fail("QBond.attach: atom is not bondable");
+      return BondStatus.cNOT_BONDABLE;
+    }
+
+    C2D coord = ew.getCoordRaw(site);
+    C2D otherCoord = ew.getCoordRaw(otherSite);
+    if (coord.manhattanDistance(otherCoord) > cMAX_DIST)
+      return BondStatus.cDISTANCE_EXCEEDS_MAX;
+
+    IBondable& bondable = (IBondable&) ew[otherSite];
+    QBond& otherBond = bondable.getBond(otherIndex);
+    if (otherBond.isAttached())
+      return BondStatus.cOTHER_IS_ATTACHED;
+
+    C2D diff = otherCoord - coord;
+    mSite = (Site) ew.getSiteNumber(diff);
+    mIndex = otherIndex;
+    otherBond.mSite = (Site) ew.getSiteNumber(-diff);
+    otherBond.mIndex = index;
+
+    return BondStatus.cOK;
+  }
+
+  Status detach() {
+    return detach(0);
+  }
+
+  Status detach(C2D coord) {
+    EventWindow ew;
+    return detach(ew.getSiteNumberRaw(coord));
+  }
+
+  Status detach(SiteNum site) {
+    EventWindow ew;
+
+    if (!isAttached())
+      return BondStatus.cNOT_ATTACHED;
+
+    SiteNum otherSite = getSiteNumber(site);
+
+    if (!ew.isAccessible(site) || !ew.isAccessible(otherSite))
+      return BondStatus.cINACCESSIBLE;
+
+    if (!(ew[otherSite] is IBondable)) {
+      fail("QBond.detach: atom is not bondable");
+      return BondStatus.cNOT_BONDABLE;
+    }
+    IBondable& bondable = (IBondable&) ew[otherSite];
+
+    QBond& otherBond = bondable.getBond(mIndex);
+    otherBond.mSite = 0;
+    mSite = 0;
+
+    return BondStatus.cOK;
+  }
+
+  Status checkForSwap(SiteNum otherSite) {
+    return checkForSwap(0, otherSite);
+  }
+
+  Status checkForSwap(SiteNum site, SiteNum otherSite) {
+    EventWindow ew;
+
+    if (!isAttached())
+      return BondStatus.cOK;
+
+    C2D coord = ew.getCoordRaw(site);
+    C2D bondedCoord = getCoord(site);
+    C2D otherCoord = ew.getCoordRaw(otherSite);
+
+    if (!ew.isAccessible(coord) || !ew.isAccessible(bondedCoord) || !ew.isAccessible(otherCoord))
+      return BondStatus.cINACCESSIBLE;
+
+    if (bondedCoord.manhattanDistance(otherCoord) > cMAX_DIST)
+      return BondStatus.cDISTANCE_EXCEEDS_MAX;
+
+    return BondStatus.cOK;
+  }
+
+  Void updateForSwap(SiteNum site, SiteNum otherSite) {
+    EventWindow ew;
+
+    if (!isAttached())
+      return;
+
+    C2D coord = ew.getCoordRaw(site);
+    C2D bondedCoord = getCoord(site);
+    C2D otherCoord = ew.getCoordRaw(otherSite);
+
+    if (!ew.isAccessible(coord) || !ew.isAccessible(bondedCoord) || !ew.isAccessible(otherCoord))
+      fail("QBond.updateForSwap: some sites are inaccessible, check with QBond.checkForSwap before swapping");
+
+    if (bondedCoord.manhattanDistance(otherCoord) > cMAX_DIST)
+      fail("QBond.updateForSwap: can'! swap without breaking a bond, check with QBond.checkForSwap before swapping");
+
+    IBondable& bondable = (IBondable&) ew[bondedCoord];
+    QBond& bonded = bondable.getBond(mIndex);
+
+    if (otherCoord != bondedCoord) {
+      C2D diff = bondedCoord - otherCoord;
+      mSite = (Site) ew.getSiteNumber(diff);
+      bonded.mSite = (Site) ew.getSiteNumber(-diff);
+
+    } else {
+      // Swapping with bonded atom, update only this end
+      mSite = (Site) ew.getSiteNumber(coord - bondedCoord);
+    }
+  }
+}

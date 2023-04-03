@@ -1,0 +1,34 @@
+transient CoordUtils {
+  typedef Int(2) Orientation;
+
+  constant Orientation cCW        = -1;
+  constant Orientation cCOLLINEAR =  0;
+  constant Orientation cCCW       =  1;
+
+  EventWindow ew;
+
+  C2D between(C2D coord1, C2D coord2) {
+    return (coord1 + coord2) / 2;
+  }
+
+  C2D rotateLeft(C2D coord) {
+    return coord.make(coord.getY(), -coord.getX());
+  }
+
+  C2D rotateRight(C2D coord) {
+    return coord.make(-coord.getY(), coord.getX());
+  }
+
+  // See https://www.cs.cmu.edu/~quake/robust.html
+  Orientation orientation(C2D p0, C2D p1, C2D q) {
+    Int detleft = (p0.getX() - q.getX()) * (p1.getY() - q.getY());
+    Int detright = (p0.getY() - q.getY()) * (p1.getX() - q.getX());
+    Int det = detleft - detright;
+
+    // negate the determinant for left-handed coordinate systems
+    if (ew.getSymmetry() < EventWindow.cSYMMETRY_000R)
+      det = -det;
+
+    return (det == 0) ? cCOLLINEAR : (det > 0) ? cCCW : cCW;
+  }
+}

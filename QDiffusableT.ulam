@@ -1,0 +1,74 @@
+local typedef EventWindow.SiteNum SiteNum;
+
+quark QDiffusableT(IDiffusable.Diffusability cDIFFUSABILITY, WindowServices.Radius cDIFFUSION_RADIUS = 4u): IDiffusable {
+
+  @Override Diffusability getDiffusability() {
+    return cDIFFUSABILITY;
+  }
+
+  @Override WindowServices.Radius getDiffusionRadius() {
+    return cDIFFUSION_RADIUS;
+  }
+
+  Void diffuse() {
+    EventWindow ew;
+    Random random;
+
+    if (getDiffusability() == 0u || getDiffusionRadius() == 0u)
+      return;
+
+    SiteNum site = getDiffusionSite();
+    if (site == SiteNum.maxof)
+      return;
+
+    Diffusability d = 0;
+    if (ew.isEmpty(site)) {
+      d = getDiffusability();
+    } else {
+      Atom& other = ew[site];
+      if (other as IDiffusable) {
+        if (other.getDiffusability() > 0u
+            && other.getDiffusionRadius() <= ew.getCoord(site).length())
+        {
+          Diffusability d1 = getDiffusability();
+          Diffusability d2 = other.getDiffusability();
+          d = (d1 < d2) ? d1 : d2;
+        }
+      }
+    }
+    if (d > 0u && random.oddsOf(d, getCompleteDiffusability())) {
+      SwapHelper sh;
+      sh.swap(0, site);
+    }
+  }
+
+  SiteNum getDiffusionSite() {
+    EventWindow ew;
+    ForceUtils fu;
+    MDist mdist;
+
+    C2D force = fu.force();
+
+    WindowServices ws;
+    ws.reset(1, getDiffusionRadius());
+    for (Int i = ws.next(); i >= 0; i = ws.next()) {
+      SiteNum site = (SiteNum) i;
+      C2D coord = ew.getCoordRaw(site);
+      Int dot = force.dot(coord);
+      if (dot >= 0)
+        ws.hit(0, (Unsigned) dot + 1u);
+    }
+    return ws.getPick();
+  }
+
+  SiteNum getDiffusionSiteDefault() {
+    WindowServices ws;
+    ws.reset(1u, getDiffusionRadius());
+    ws.scan(WindowServices.cALL_SITES_HIT);
+    return ws.getPick();
+  }
+
+  Diffusability getCompleteDiffusability() {
+    return 1000;
+  }
+}

@@ -1,0 +1,219 @@
+local typedef BondStatus BS;
+local typedef EventWindow.SiteNum SiteNum;
+
+element Demo : QStateT(3) + QBondableT(2) + QMortal {
+  @Override Void behave() {
+    EventWindow ew;
+
+    Demo_MembraneBuilder builder;
+    ew[1] = builder;
+    die();
+  }
+}
+
+local typedef QBondableT(1) QBondable1;
+
+/**
+   \symbol MB
+ */
+element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
+  typedef C2D.Dir Dir;
+
+  constant Unsigned(4) cSIDE_LENGTH = 10;
+  constant Unsigned(3) cSTEP_LENGTH = 2;
+
+  constant State cSTATE_BUILD    = 0;
+  constant State cSTATE_ANCHOR   = 1;
+  constant State cSTATE_TRAVERSE = 2;
+  constant State cSTATE_FORWARD  = 3;
+  constant State cSTATE_CLOSE    = 4;
+
+  DebugUtils du;
+
+  Dir mDir = 0;
+  Unsigned(4) mCounter = 0;
+  Unsigned(3) mMoveCounter = 0;
+
+  @Override Void behave() {
+    if (isState(cSTATE_BUILD)) {
+      build();
+    } else if (isState(cSTATE_ANCHOR)) {
+      anchor();
+    } else if (isState(cSTATE_TRAVERSE)) {
+      traverse();
+    } else if (isState(cSTATE_FORWARD)) {
+      forward();
+    } else if (isState(cSTATE_CLOSE)) {
+      close();
+    } else if (isState(cSTATE_DONE)) {
+      // die();
+    }
+  }
+
+  Void build() {
+    du.print("Building");
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    // Build
+    SiteNum site = ewm.findEmptySite(1, 2);
+    if (site == SiteNum.maxof)
+      return;
+    Membrane membrane;
+    ew[site] = membrane;
+
+    BS.Status status = BS.cOK;
+    QBond& bond = getBond(0);
+    if (!bond.isAttached()) {
+      // First membrane atom, attach to self
+      du.print("attaching to self");
+      status = bu.attach(0, 0, site, Membrane.cCOMMON);
+    } else {
+      // Attach to previous membrane atom
+      du.print("attaching to previous");
+      status = bu.attach(bond.getSiteNumber(), Membrane.cNEXT, site, Membrane.cPREV);
+    }
+
+    if (bs.isOk(status)) {
+      du.print("attached");
+      setState(cSTATE_ANCHOR);
+
+    } else {
+      du.print("failed to attach");
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+  }
+
+  Void anchor() {
+    du.print("Anchoring");
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& bond = getBond(0);
+    SiteNum membraneSite = bond.getSiteNumber();
+    Membrane& membrane = (Membrane&) ew[membraneSite];
+    QBond& otherBond = membrane.getBond(Membrane.cOTHER);
+
+    if (mCounter > 0 || otherBond.isAttached()) {
+      du.print("traverse");
+      setState(cSTATE_TRAVERSE);
+      return;
+    }
+
+    // Build anchor
+    SiteNum site = ewm.findEmptySite(1, 2);
+    if (site == SiteNum.maxof)
+      return;
+    Anchor anchor;
+    ew[site] = anchor;
+
+    // Attach to membrane
+    BS.Status status = bu.attach(site, 0, membraneSite, Membrane.cOTHER);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+    du.print("attached to anchor");
+  }
+
+  Void traverse() {
+    du.print("Traversing");
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    BS.Status status = bu.traverse(0, 0, Membrane.cNEXT);
+    if (bs.isOk(status) || status == BS.cNO_NEXT)
+      setState(cSTATE_FORWARD);
+  }
+
+  Void forward() {
+    du.print("Moving");
+    if (mMoveCounter >= cSTEP_LENGTH) {
+      mMoveCounter = 0;
+      mCounter++;
+      if (mCounter >= cSIDE_LENGTH) {
+        // Side finished, move to next side
+        mCounter = 0;
+        mDir = nextDir(mDir);
+        if (mDir == 0) {
+          // Last side finished, close the membrane
+          setState(cSTATE_CLOSE);
+          return;
+        }
+      }
+      setState(cSTATE_BUILD);
+      return;
+    }
+
+    EventWindow ew;
+    SwapHelper sh;
+
+    C2D origin;
+    C2D coord = origin.neighbor(mDir);
+    if (ew.isEmpty(coord)) {
+      mMoveCounter++; // increment _before_ swapping
+      if (!sh.swap(origin, coord))
+        mMoveCounter--;
+    }
+  }
+
+  Void close() {
+    du.print("Closing");
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(0);
+    SiteNum prevSite = bond.getSiteNumber();
+    SiteNum nextSite = getFirstSite();
+    if (nextSite == SiteNum.maxof)
+      return;
+
+    BS.Status status = bu.attach(prevSite, Membrane.cNEXT, nextSite, Membrane.cPREV);
+    if (bs.isOk(status))
+      setState(cSTATE_DONE);
+  }
+
+  SiteNum getFirstSite() {
+    EventWindow ew;
+    MDist mdist;
+
+    for (Int s = 1; s <= mdist.getLastIndex(4); s++) {
+      SiteNum site = (SiteNum) s;
+      Atom& atom = ew[site];
+      if (atom as Membrane)
+        if (!atom.getBond(Membrane.cPREV).isAttached())
+          return site;
+    }
+    return SiteNum.maxof;
+  }
+
+  Dir nextDir(Dir dir) {
+    return (Dir) (((Int) dir + 2) % 8);
+  }
+
+  @Override Void renderGraphics() {
+    self.QBondable1.renderGraphics();
+
+    Drawable drawable;
+    if (!drawable.canDraw())
+      return;
+
+    C2D start;
+    C2D end = start.neighbor(mDir) * (Drawable.cUNITS_PER_SITE * 3 / 4);
+
+    ColorUtils cu;
+    ARGB oncol = cu.color(0x00ffffff);
+    ARGB offcol = oncol;
+
+    drawable.drawMaskedLine(start, end, oncol, offcol, 0xffffffff);
+  }
+}

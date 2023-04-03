@@ -1,0 +1,97 @@
+local typedef BondStatus BS;
+
+transient BondUtils + Fail {
+  typedef EventWindow.SiteNum SiteNum;
+  typedef BondStatus.Status Status;
+  typedef QBond.Index Index;
+
+  BondStatus bs;
+  EventWindow ew;
+
+  WindowServices.Radius maxDist(IBondable& bondable1, IBondable& bondable2) {
+    Unsigned dist1 = bondable1.getMaxDist();
+    Unsigned dist2 = bondable2.getMaxDist();
+    return (WindowServices.Radius) ((dist1 > dist2) ? dist1 : dist2);
+  }
+
+
+  Status attach(C2D coord, Index index, C2D coordOther, Index indexOther) {
+    IBondable& bondable1 = (IBondable&) ew[coord];
+    return bondable1.getBond(index).attach(coord, index, coordOther, indexOther);
+  }
+
+  Status attach(SiteNum site, Index index, SiteNum siteOther, Index indexOther) {
+    IBondable& bondable1 = (IBondable&) ew[site];
+    return bondable1.getBond(index).attach(site, index, siteOther, indexOther);
+  }
+
+
+  Status detach(C2D coord, Index index) {
+    IBondable& bondable = (IBondable&) ew[coord];
+    return bondable.getBond(index).detach(coord);
+  }
+
+  Status detach(SiteNum site, Index index) {
+    IBondable& bondable = (IBondable&) ew[site];
+    return bondable.getBond(index).detach(site);
+  }
+
+
+  Status traverse(C2D coord, Index index, Index indexNext) {
+    // attach to bond with same index as in current item
+    return traverse(coord, index, indexNext, QBond.Num.maxof);
+  }
+
+  Status traverse(C2D coord, Index index, Index indexNext, QBond.Num indexBond) {
+    SiteNum site = ew.getSiteNumberRaw(coord);
+    return traverse(site, index, indexNext, indexBond);
+  }
+
+  Status traverse(SiteNum site, Index index, Index indexNext) {
+    // attach to bond with same index as in current item
+    return traverse(site, index, indexNext, QBond.Num.maxof);
+  }
+
+  Status traverse(SiteNum site, Index index, Index indexNext, QBond.Num indexBond) {
+    if (!ew.isAccessible(site))
+      return BS.cINACCESSIBLE;
+
+    // Object
+    IBondable& obj = (IBondable&) ew[site];
+    QBond& bondCurrent = obj.getBond(index);
+    if (!bondCurrent.isAttached())
+      return BS.cNOT_ATTACHED;
+    SiteNum siteCurrent = bondCurrent.getSiteNumber();
+    if (!ew.isAccessible(siteCurrent))
+      return BS.cINACCESSIBLE;
+    IBondable& current = (IBondable&) ew[siteCurrent];
+
+    // Current item
+    QBond& bondNext = current.getBond(indexNext);
+    if (!bondNext.isAttached())
+      return BS.cNO_NEXT;
+    SiteNum siteNext = bondNext.getSiteNumber(siteCurrent);
+    if (!ew.isAccessible(siteNext))
+      return BS.cINACCESSIBLE;
+
+    Index indexCurrent = bondCurrent.getIndex(); // remember current index in case we need to reattach
+    if (indexBond > QBond.Index.maxof)
+      indexBond = indexCurrent; // attach to bond with same index as in current item
+
+    Status status = BS.cOK;
+
+    // Detach
+    status = bondCurrent.detach(site);
+    if (!bs.isOk(status))
+      return status;
+
+    // Attach
+    status = bondCurrent.attach(site, index, siteNext, (QBond.Index) indexBond);
+    if (!bs.isOk(status)) {
+      // try to re-attach
+      if (!bs.isOk(bondCurrent.attach(site, index, siteCurrent, indexCurrent)))
+        fail("BondUtils.traverse: failed to re-attach");
+    }
+    return status;
+  }
+}
