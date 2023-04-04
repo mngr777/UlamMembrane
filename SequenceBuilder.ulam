@@ -17,20 +17,20 @@ transient SequenceBuilder + Fail {
     if (!(builder is IBondable))
       fail("Builder atom is not bondable");
 
-    QBond.Index prevIndex = reverse ? Sequence.cNEXT : Sequence.cPREV;
-    QBond.Index nextIndex = reverse ? Sequence.cPREV : Sequence.cNEXT;
+    QBond.Index prevIndex = reverse ? Package.cNEXT : Package.cPREV;
+    QBond.Index nextIndex = reverse ? Package.cPREV : Package.cNEXT;
 
     IBondable& bondable = (IBondable&) builder;
     QBond& bond = bondable.getBond(index);
     SiteNum site = ew.getSiteNumber(builder);
 
     // Build
-    Sequence seq;
+    Package seq;
     SiteNum nextSite = ewm.findEmptySiteAround(builder, 1u, bu.maxDist(bondable, seq));
     if (nextSite == SiteNum.maxof)
       return false;
     ew[nextSite] = seq;
-    Sequence& next = (Sequence&) ew[nextSite];
+    Package& next = (Package&) ew[nextSite];
 
     BS.Status status = BS.cOK;
 
@@ -51,7 +51,7 @@ transient SequenceBuilder + Fail {
 
     } else {
       // First item, bond to the builder
-      status = bond.attach(site, index, nextSite, Sequence.cCOMMON);
+      status = bond.attach(site, index, nextSite, Package.cCOMMON);
       if (!bs.isOk(status)) {
         Empty empty;
         ew[nextSite] = empty;

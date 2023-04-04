@@ -1,0 +1,127 @@
+transient PackageData {
+  typedef DataUtils.Datum Datum;
+  typedef DataUtils.Byte Byte;
+  typedef DataUtils.Integer Integer;
+
+  typedef Unsigned(2) Arity;
+  typedef Unsigned(2) Type;
+
+  typedef Byte Symbol;
+
+  constant Datum cNODATA = 0x0;
+  constant Byte cNIL = 0x0;
+
+  constant Type cTYPE_TAG         = 0;
+  constant Type cTYPE_FUNCTION    = 1;
+  constant Type cTYPE_CONDITIONAL = 2;
+  constant Type cTYPE_CONSTANT    = 3;
+
+  // Data
+  //
+  // arity  type unused        tag/symbol/value
+  //   v     v     v             v
+  // | 0 1 | 2 3 | 4 5 | 6 | 7 | 0 1 2 3 4 5 6 7
+  //                     ^   ^
+  //             executable? has value?
+  //
+  constant Byte cARITY_MASK = 0b11000000;
+  constant Unsigned cARITY_SHIFT = 6;
+
+  constant Byte cTYPE_MASK = 0b00110000;
+  constant Unsigned cTYPE_SHIFT = 4;
+
+  constant Byte cIS_EXEC_MASK = 0b00000010;
+  constant Unsigned cIS_EXEC_SHIFT = 1;
+
+  // Aux
+  // (either final result of node evaluation or stored 1st argument)
+  //
+  //  unused       final?  value
+  //   v             v       v
+  // | 0 1 2 3 4 5 | 6 | 7 | 0 1 2 3 4 5 6 7
+  //                     ^
+  //                    has value?
+  //
+  constant Byte cIS_FINAL_MASK = 0b00000010;
+  constant Unsigned cIS_FINAL_SHIFT = 1;
+
+  // Common
+  constant Byte cHAS_VALUE_MASK = 0b00000001;
+  constant Unsigned cHAS_VALUE_SHIFT = 0;
+
+  DataUtils dd;
+
+  // Data
+
+  Arity getArity(Datum datum) {
+    return (Arity) dd.getHi(datum, cARITY_MASK, cARITY_SHIFT);
+  }
+
+  Datum setArity(Datum datum, Arity arity) {
+    return dd.setHi(datum, arity, cARITY_MASK, cARITY_SHIFT);
+  }
+
+  Type getType(Datum datum) {
+    return (Type) dd.getHi(datum, cTYPE_MASK, cTYPE_SHIFT);
+  }
+
+  Datum setType(Datum datum, Type type) {
+    return dd.setHi(datum, type, cTYPE_MASK, cTYPE_SHIFT);
+  }
+
+  Bool isExec(Datum datum) {
+    return (Bool) dd.getHi(datum, cIS_EXEC_MASK, cIS_EXEC_SHIFT);
+  }
+
+  Datum setExec(Datum datum, Bool exec) {
+    return dd.setHi(datum, (Byte) exec, cIS_EXEC_MASK, cIS_EXEC_SHIFT);
+  }
+
+  Symbol getSymbol(Datum datum) {
+    return getValue(datum);
+  }
+
+  Datum setSymbol(Datum datum, Symbol symbol) {
+    return setValue(datum, symbol);
+  }
+
+  // Aux
+
+  Bool isFinal(Datum datum) {
+    return (Bool) dd.getHi(datum, cIS_FINAL_MASK, cIS_FINAL_SHIFT);
+  }
+
+  Datum setIsFinal(Datum datum, Bool isFinal) {
+    return dd.setHi(datum, (Byte) isFinal, cIS_FINAL_MASK, cIS_FINAL_SHIFT);
+  }
+
+  // Common
+
+  Bool hasValue(Datum datum) {
+    return (Bool) dd.getHi(datum, cHAS_VALUE_MASK, cHAS_VALUE_SHIFT);
+  }
+
+  Byte getValue(Datum datum) {
+    return dd.getLo(datum);
+  }
+
+  Datum setValue(Datum datum, Byte value) {
+    datum = dd.setLo(datum, value);
+    datum = dd.setHi(datum, 0x1, cHAS_VALUE_MASK, cHAS_VALUE_SHIFT);
+    return datum;
+  }
+
+  Datum unsValue(Datum datum) {
+    datum = dd.setLo(datum, cNIL);
+    datum = dd.setHi(datum, 0x0, cHAS_VALUE_MASK, cHAS_VALUE_SHIFT);
+    return datum;
+  }
+
+  Integer getInteger(Datum datum) {
+    return dd.toInteger(getValue(datum));
+  }
+
+  Datum setInteger(Datum datum, Integer value) {
+    return setValue(datum, dd.fromInteger(value));
+  }
+}

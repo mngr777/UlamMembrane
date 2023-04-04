@@ -1,0 +1,98 @@
+element Package : QBondableT(4) + QDiffusableT(100) {
+  typedef DataUtils.Datum Datum;
+
+  constant QBond.Index cCOMMON = 0;
+
+  // Sequence (non-executable)
+  constant QBond.Index cPREV   = 1;
+  constant QBond.Index cNEXT   = 2;
+
+  // Tree (executable)
+  constant QBond.Index cUP     = 1;
+  constant QBond.Index cLEFT   = 2;
+  constant QBond.Index cRIGHT  = 3;
+
+  Datum mData = PackageData.cNODATA;
+  Datum mAux  = PackageData.cNODATA;
+
+
+  Datum getData() {
+    return mData;
+  }
+
+  Void setData(Datum data) {
+    mData = data;
+  }
+
+  Datum getAux() {
+    return mAux;
+  }
+
+  Void setAux(Datum data) {
+    mAux = data;
+  }
+
+
+  // Sequence
+
+  Bool isFirst() {
+    return !getBond(cPREV).isAttached();
+  }
+
+  Bool isLast() {
+    return !getBond(cNEXT).isAttached();
+  }
+
+  // Tree
+
+  Bool isRoot() {
+    return !getBond(cUP).isAttached();
+  }
+
+  Bool isTerm() {
+    return getChildNum() == 0u;
+  }
+
+  Unsigned getChildNum() {
+    Unsigned num = 0u;
+    if (getBond(cLEFT).isAttached())
+      num++;
+    if (getBond(cRIGHT).isAttached())
+      num++;
+    return num;
+  }
+
+
+  @Override Void behave() {
+    diffuse();
+  }
+
+  @Override ARGB getColor(Unsigned selector) {
+    PackageData pd;
+    return pd.isExec(getData())
+      ? getExecColor()
+      : getNonExecColor();
+  }
+
+  ARGB getExecColor() {
+    ColorUtils cu;
+    Bits hex = 0x00ffff00; // yellow
+    if (isRoot()) {
+      hex = 0x00ff00ff;    // magenta
+    } else if (isTerm()) {
+      hex = 0x0000ffff;    // cyan
+    }
+    return cu.color(hex);
+  }
+
+  ARGB getNonExecColor() {
+    ColorUtils cu;
+    Bits hex = 0x0000ff00; // green
+    if (isFirst()) {
+      hex = 0x00ff0000;    // red
+    } else if (isLast()) {
+      hex = 0x000000ff;    // blue
+    }
+    return cu.color(hex);
+  }
+}
