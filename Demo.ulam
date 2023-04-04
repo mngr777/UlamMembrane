@@ -1,41 +1,68 @@
 local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
 
-element Demo : QStateT(3) + QBondableT(2) + QMortal {
+element Demo : QStateT(3) + QBondableT(1) + QMortal {
+  constant State cPLACE_MEMBRANE_BUILDER = 0;
+  constant State cBUILD_SEQUENCE         = 1;
+
+  Unsigned mCount = 0;
+
   @Override Void behave() {
+    if (isState(cPLACE_MEMBRANE_BUILDER)) {
+      placeMembraneBuilder();
+    } else if (isState(cBUILD_SEQUENCE)) {
+      buildSequence();
+    } else if (isState(cSTATE_DONE)) {
+      die();
+    }
+  }
+
+  Void placeMembraneBuilder() {
     EventWindow ew;
 
     Demo_MembraneBuilder builder;
     ew[1] = builder;
-    die();
+
+    setState(cBUILD_SEQUENCE);
+  }
+
+  Void buildSequence() {
+    SequenceBuilder builder;
+    if (builder.buildNext(self, 0))
+      mCount++;
+
+    if (mCount >= 20u)
+      setState(cSTATE_DONE);
   }
 }
+
 
 local typedef QBondableT(1) QBondable1;
 
 /**
    \symbol MB
  */
-element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
+element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
   typedef C2D.Dir Dir;
 
-  constant Unsigned(4) cSIDE_LENGTH = 10;
-  constant Unsigned(3) cSTEP_LENGTH = 2;
+  constant Unsigned(5) cSIDE_LENGTH = 16;
+  constant Unsigned(2) cSTEP_LENGTH = 2;
 
-  constant State cSTATE_BUILD    = 0;
-  constant State cSTATE_ANCHOR   = 1;
-  constant State cSTATE_TRAVERSE = 2;
-  constant State cSTATE_FORWARD  = 3;
-  constant State cSTATE_CLOSE    = 4;
+  constant State cSTATE_MOVE_OUT = 0;
+  constant State cSTATE_BUILD    = 1;
+  constant State cSTATE_ANCHOR   = 2;
+  constant State cSTATE_TRAVERSE = 3;
+  constant State cSTATE_FORWARD  = 4;
+  constant State cSTATE_CLOSE    = 5;
 
-  DebugUtils du;
-
-  Dir mDir = 0;
-  Unsigned(4) mCounter = 0;
-  Unsigned(3) mMoveCounter = 0;
+  Dir mDir = 0; // South
+  Unsigned(5) mCount = 0;
+  Unsigned(2) mMoveCount = 0;
 
   @Override Void behave() {
-    if (isState(cSTATE_BUILD)) {
+    if (isState(cSTATE_MOVE_OUT)) {
+      moveOut();
+    } else if (isState(cSTATE_BUILD)) {
       build();
     } else if (isState(cSTATE_ANCHOR)) {
       anchor();
@@ -46,12 +73,30 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
     } else if (isState(cSTATE_CLOSE)) {
       close();
     } else if (isState(cSTATE_DONE)) {
-      // die();
+      die();
+    }
+  }
+
+  Void moveOut() {
+    // NOTE: cannot do this after swapping
+    if (mCount >= cSIDE_LENGTH / 2) {
+      mCount = 0;
+      setState(cSTATE_BUILD);
+      return;
+    }
+
+    EventWindow ew;
+    SwapHelper sh;
+    C2D origin;
+    C2D coord = origin.neighbor(5); // North-West
+    if (ew.isEmpty(coord)) {
+      mCount++; // increment _before_ swapping
+      if (!sh.swap(origin, coord))
+        mCount--;
     }
   }
 
   Void build() {
-    du.print("Building");
     BondStatus bs;
     BondUtils bu;
     EventWindow ew;
@@ -68,20 +113,16 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
     QBond& bond = getBond(0);
     if (!bond.isAttached()) {
       // First membrane atom, attach to self
-      du.print("attaching to self");
       status = bu.attach(0, 0, site, Membrane.cCOMMON);
     } else {
       // Attach to previous membrane atom
-      du.print("attaching to previous");
       status = bu.attach(bond.getSiteNumber(), Membrane.cNEXT, site, Membrane.cPREV);
     }
 
     if (bs.isOk(status)) {
-      du.print("attached");
       setState(cSTATE_ANCHOR);
 
     } else {
-      du.print("failed to attach");
       Empty empty;
       ew[site] = empty;
       return;
@@ -89,7 +130,6 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
   }
 
   Void anchor() {
-    du.print("Anchoring");
     BondStatus bs;
     BondUtils bu;
     EventWindow ew;
@@ -100,14 +140,13 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
     Membrane& membrane = (Membrane&) ew[membraneSite];
     QBond& otherBond = membrane.getBond(Membrane.cOTHER);
 
-    if (mCounter > 0 || otherBond.isAttached()) {
-      du.print("traverse");
+    if (mCount > 0 || otherBond.isAttached()) {
       setState(cSTATE_TRAVERSE);
       return;
     }
 
     // Build anchor
-    SiteNum site = ewm.findEmptySite(1, 2);
+    SiteNum site = ewm.findEmptySite(2, 2);
     if (site == SiteNum.maxof)
       return;
     Anchor anchor;
@@ -120,11 +159,9 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
       ew[site] = empty;
       return;
     }
-    du.print("attached to anchor");
   }
 
   Void traverse() {
-    du.print("Traversing");
     BondStatus bs;
     BondUtils bu;
     EventWindow ew;
@@ -135,14 +172,14 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
   }
 
   Void forward() {
-    du.print("Moving");
-    if (mMoveCounter >= cSTEP_LENGTH) {
-      mMoveCounter = 0;
-      mCounter++;
-      if (mCounter >= cSIDE_LENGTH) {
+    // NOTE: can't do all this after swapping
+    if (mMoveCount >= cSTEP_LENGTH) {
+      mMoveCount = 0;
+      mCount++;
+      if (mCount >= cSIDE_LENGTH) {
         // Side finished, move to next side
-        mCounter = 0;
-        mDir = nextDir(mDir);
+        mCount = 0;
+        mDir = getNextDir();
         if (mDir == 0) {
           // Last side finished, close the membrane
           setState(cSTATE_CLOSE);
@@ -156,17 +193,15 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
     EventWindow ew;
     SwapHelper sh;
 
-    C2D origin;
-    C2D coord = origin.neighbor(mDir);
-    if (ew.isEmpty(coord)) {
-      mMoveCounter++; // increment _before_ swapping
-      if (!sh.swap(origin, coord))
-        mMoveCounter--;
+    SiteNum forwardSite = getForwardSite();
+    if (ew.isEmpty(forwardSite)) {
+      mMoveCount++; // increment _before_ swapping
+      if (!sh.swap(0, forwardSite))
+        mMoveCount--;
     }
   }
 
   Void close() {
-    du.print("Closing");
     BondStatus bs;
     BondUtils bu;
     EventWindow ew;
@@ -196,8 +231,14 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) {
     return SiteNum.maxof;
   }
 
-  Dir nextDir(Dir dir) {
-    return (Dir) (((Int) dir + 2) % 8);
+  Dir getNextDir() {
+    return (Dir) (((Int) mDir + 2) % 8);
+  }
+
+  SiteNum getForwardSite() {
+    EventWindow ew;
+    C2D origin;
+    return ew.getSiteNumber(origin.neighbor(mDir));
   }
 
   @Override Void renderGraphics() {
