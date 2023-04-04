@@ -1,0 +1,17 @@
+/**
+   Default tree builder.
+
+   \symbol TB
+   \symmetry all
+ */
+element TreeBuilder : QTreeBuilder + QBondableT(2) + QDiffusableT(100) {
+
+  virtual IBondable& getBondable() {
+    return self;
+  }
+
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
+}

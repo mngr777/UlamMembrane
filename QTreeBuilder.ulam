@@ -1,0 +1,192 @@
+local typedef BondStatus BS;
+local typedef EventWindow.SiteNum SiteNum;
+local typedef PackageData.Arity Arity;
+
+quark QTreeBuilder : QStateT(4) {
+  constant QBond.Index cSEQUENCE = 0u;
+  constant QBond.Index cTREE = 1u;
+
+  constant State cSTATE_READY      = 0;
+  constant State cSTATE_BUILD      = 1;
+  constant State cSTATE_ADVANCE    = 2;
+  constant State cSTATE_MOVE_UP    = 3;
+  constant State cSTATE_MOVE_DOWN  = 4;
+  constant State cSTATE_BUILD_DONE = 5;
+
+  QBond.Index mDownIndex; // child index to move to in `cSTATE_MOVE_DOWN`
+
+  virtual IBondable& getBondable();
+
+  Void step() {
+    if (isState(cSTATE_READY)) {
+      attach();
+    } else if (isState(cSTATE_BUILD)) {
+      build();
+    } else if (isState(cSTATE_ADVANCE)) {
+      advance();
+    } else if (isState(cSTATE_MOVE_UP)) {
+      moveUp();
+    } else if (isState(cSTATE_MOVE_DOWN)) {
+      moveDown();
+    }
+  }
+
+  Void attach() {
+    QBond& bond = getBondable().getBond(cSEQUENCE);
+    if (bond.isAttached())
+      setState(cSTATE_BUILD);
+
+    SiteNum site = findActive();
+    bond.attach(cSEQUENCE, site, Package.cCOMMON);
+  }
+
+  Void build() {
+    EventWindow ew;
+    PackageData pd;
+
+    QBond& bond = getBondable().getBond(cSEQUENCE);
+    Package& pkg = (Package&) ew[bond.getSiteNumber()];
+
+    if (!getBondable().getBond(cTREE).isAttached()) {
+      buildRoot(pkg);
+    } else {
+      buildChild(pkg);
+    }
+  }
+
+  Void advance() {
+    BondUtils bu;
+    BondStatus bs;
+
+    BS.Status status = bu.traverse(0, cSEQUENCE, Package.cNEXT);
+    if (bs.isOk(status)) {
+      setState(cSTATE_BUILD);
+
+    } else if (status == BS.cNO_NEXT) {
+      setState(cSTATE_BUILD_DONE);
+
+    } else if (status != BS.cINACCESSIBLE) {
+      setState(cSTATE_ERROR);
+    }
+  }
+
+  Void moveUp() {
+    BondUtils bu;
+    BondStatus bs;
+
+    BS.Status status = bu.traverse(0, cTREE, Package.cUP);
+    if (bs.isOk(status)) {
+      setState(cSTATE_BUILD);
+
+    } else if (status != BS.cINACCESSIBLE) {
+      setState(cSTATE_ERROR);
+    }
+  }
+
+  Void moveDown() {
+    BondUtils bu;
+    BondStatus bs;
+
+    BS.Status status = bu.traverse(0, cTREE, mDownIndex);
+    if (bs.isOk(status)) {
+      setState(cSTATE_ADVANCE);
+
+    } else if (status != BS.cINACCESSIBLE) {
+      setState(cSTATE_ERROR);
+    }
+  }
+
+  SiteNum findActive() {
+    BondUtils bu;
+    EventWindow ew;
+    PackageData pd;
+
+    Package pkg;
+    WindowServices ws;
+    ws.reset(1, bu.maxDist(getBondable(), pkg));
+    for (Int s = ws.next(); s >= 0; s = ws.next()) {
+      SiteNum site = (SiteNum) s;
+      if (!(ew[site] is Package))
+        continue;
+
+      Package& pkg = (Package&) ew[site];
+      if (!pd.isExec(pkg.getData()) && pd.isActive(pkg.getAux()))
+        ws.hit();
+    }
+    return ws.getPick();
+  }
+
+  Void buildRoot(Package& item) {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    // Build root
+    SiteNum site = doBuild(item);
+    if (site == SiteNum.maxof)
+      return;
+
+    // Attach to it
+    BS.Status status = bu.attach(0, cTREE, site, Package.cCOMMON);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+
+    setState(cSTATE_ADVANCE);
+  }
+
+  Void buildChild(Package& item) {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    PackageData pd;
+
+    // Get current subtree root
+    SiteNum treeSite = getBondable().getBond(cTREE).getSiteNumber();
+    Package& tree = (Package&) ew[treeSite];
+
+    // Is this subtree complete?
+    if (tree.getChildNum() == pd.getArity(tree.getData())) {
+      setState(cSTATE_MOVE_UP);
+      return;
+    }
+
+    // Build child
+    SiteNum site = doBuild(item);
+    if (site == SiteNum.maxof)
+      return;
+
+    // Attach to parent
+    QBond.Index childIndex = (tree.getChildNum() == 0u)
+      ? Package.cLEFT
+      : Package.cRIGHT;
+    BS.Status status = bu.attach(treeSite, childIndex, site, Package.cUP);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+
+    mDownIndex = childIndex;
+    setState(cSTATE_MOVE_DOWN);
+  }
+
+  SiteNum doBuild(Package& item) {
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+    PackageData pd;
+
+    Package tree;
+    SiteNum site = ewm.findEmptySite(1, bu.maxDist(getBondable(), tree));
+    if (site != SiteNum.maxof) {
+      PackageData.Datum data = item.getData();
+      data = pd.setIsExec(data, true);
+      tree.setData(data);
+      ew[site] = tree;
+    }
+    return site;
+  }
+}

@@ -81,7 +81,7 @@ transient PackageData {
     return (Bool) dd.getHi(datum, cIS_EXEC_MASK, cIS_EXEC_SHIFT);
   }
 
-  Datum setExec(Datum datum, Bool exec) {
+  Datum setIsExec(Datum datum, Bool exec) {
     return dd.setHi(datum, (Byte) exec, cIS_EXEC_MASK, cIS_EXEC_SHIFT);
   }
 
@@ -94,6 +94,10 @@ transient PackageData {
   }
 
   // Aux (non-executable)
+
+  Bool hasTag(Datum datum) {
+    return hasValue(datum);
+  }
 
   Tag getTag(Datum datum) {
     return getValue(datum);

@@ -1,5 +1,8 @@
 local typedef QBondableT(4) QBondable4;
 
+/**
+   \symmetry all
+ */
 element Package : QBondable4 + ITaggable + QDiffusableT(100) {
   typedef DataUtils.Datum Datum;
 
@@ -35,19 +38,20 @@ element Package : QBondable4 + ITaggable + QDiffusableT(100) {
   }
 
 
+  // Sequence
+
   @Override Tag getTag() {
     PackageData pd;
     Datum data = getAux();
-    return pd.hasValue(data) ? pd.getTag(data) : ITaggable.cNO_TAG;
+    return (pd.isExec(data) && pd.hasValue(data))
+      ? pd.getTag(data)
+      : ITaggable.cNO_TAG;
   }
 
   @Override Void setTag(Tag tag) {
     PackageData pd;
     setAux(pd.setTag(getAux(), tag));
   }
-
-
-  // Sequence
 
   Bool isFirst() {
     return !getBond(cPREV).isAttached();
