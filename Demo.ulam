@@ -1,5 +1,6 @@
 local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
+local typedef PackageData PD;
 
 element Demo : QStateT(3) + QBondableT(1) + QMortal {
   constant State cPLACE_MEMBRANE_BUILDER = 0;
@@ -27,12 +28,15 @@ element Demo : QStateT(3) + QBondableT(1) + QMortal {
   }
 
   Void buildSequence() {
-    SequenceBuilder builder;
-    if (builder.buildNext(self, 0))
-      mCount++;
+    Demo_SequenceData data;
 
-    if (mCount >= 20u)
+    SequenceBuilder builder;
+    if (builder.buildNext(self, 0, data.items[mCount], data.items[mCount + 1u]))
+      mCount += 2u;
+
+    if (mCount >= data.cSIZE)
       setState(cSTATE_DONE);
+
   }
 }
 
@@ -78,8 +82,8 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
   }
 
   Void moveOut() {
-    // NOTE: cannot do this after swapping
-    if (mCount >= cSIDE_LENGTH / 2) {
+    // NOTE: cannot do checks after swapping
+    if (mCount >= cSIDE_LENGTH * cSTEP_LENGTH / 2) {
       mCount = 0;
       setState(cSTATE_BUILD);
       return;
@@ -132,6 +136,7 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
   Void anchor() {
     BondStatus bs;
     BondUtils bu;
+    CoordUtils cu;
     EventWindow ew;
     EventWindowMisc ewm;
 
@@ -146,8 +151,11 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
     }
 
     // Build anchor
-    SiteNum site = ewm.findEmptySite(2, 2);
-    if (site == SiteNum.maxof)
+    // TODO: find a way to place anchors that mostly works
+    C2D coord = ew.getCoordRaw(getForwardSite());
+    coord = cu.rotateLeft(coord);
+    SiteNum site = ew.getSiteNumberRaw(-coord);
+    if (!ew.isEmpty(site))
       return;
     Anchor anchor;
     ew[site] = anchor;
@@ -172,7 +180,7 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
   }
 
   Void forward() {
-    // NOTE: can't do all this after swapping
+    // NOTE: cannot do checks after swapping
     if (mMoveCount >= cSTEP_LENGTH) {
       mMoveCount = 0;
       mCount++;
@@ -248,13 +256,29 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
     if (!drawable.canDraw())
       return;
 
+    ColorUtils cu;
     C2D start;
     C2D end = start.neighbor(mDir) * (Drawable.cUNITS_PER_SITE * 3 / 4);
-
-    ColorUtils cu;
     ARGB oncol = cu.color(0x00ffffff);
     ARGB offcol = oncol;
-
     drawable.drawMaskedLine(start, end, oncol, offcol, 0xffffffff);
   }
+}
+
+
+transient Demo_SequenceData {
+  typedef DataUtils.Datum Datum;
+  typedef ITaggable.Tag Tag;
+
+  constant Unsigned cSIZE = 6;
+
+  constant Unsigned cMETA_SHIFT = PD.Byte.sizeof;
+  constant Datum cIS_ACTIVE = (0x1 << PD.cIS_ACTIVE_SHIFT) << cMETA_SHIFT;
+  constant Datum cHAS_VALUE = (0x1 << PD.cHAS_VALUE_SHIFT) << cMETA_SHIFT;
+
+  Datum items[cSIZE] = {
+    PD.cNO_DATA, PD.cNO_DATA | cIS_ACTIVE | cHAS_VALUE | (Tag) 0x1,
+    PD.cNO_DATA, PD.cNO_DATA,
+    PD.cNO_DATA, PD.cNO_DATA
+  };
 }

@@ -25,7 +25,7 @@ transient AttractionUtils {
 
     if (type1 == cTYPE_DEFAULT) {
       if (type2 == cTYPE_MEMBRANE) {
-        return (Int) distance - 5;
+        return -(((Int) distance - 5) * ((Int) distance - 5));
       }
 
     } else if (type1 == cTYPE_MEMBRANE) {

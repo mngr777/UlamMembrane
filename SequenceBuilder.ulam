@@ -3,17 +3,18 @@ local typedef EventWindow.SiteNum SiteNum;
 
 transient SequenceBuilder + Fail {
   typedef QBond.Index Index;
+  typedef DataUtils.Datum Datum;
 
   BondStatus bs;
   BondUtils bu;
   EventWindow ew;
   EventWindowMisc ewm;
 
-  Bool buildNext(Atom& builder, Index index) {
-    return buildNext(builder, index, true);
+  Bool buildNext(Atom& builder, Index index, Datum data, Datum aux) {
+    return buildNext(builder, index, data, aux, false);
   }
 
-  Bool buildNext(Atom& builder, Index index, Bool reverse) {
+  Bool buildNext(Atom& builder, Index index, Datum data, Datum aux, Bool reverse) {
     if (!(builder is IBondable))
       fail("Builder atom is not bondable");
 
@@ -25,11 +26,13 @@ transient SequenceBuilder + Fail {
     SiteNum site = ew.getSiteNumber(builder);
 
     // Build
-    Package seq;
-    SiteNum nextSite = ewm.findEmptySiteAround(builder, 1u, bu.maxDist(bondable, seq));
+    Package pkg;
+    pkg.setData(data);
+    pkg.setAux(aux);
+    SiteNum nextSite = ewm.findEmptySiteAround(builder, 1u, bu.maxDist(bondable, pkg));
     if (nextSite == SiteNum.maxof)
       return false;
-    ew[nextSite] = seq;
+    ew[nextSite] = pkg;
     Package& next = (Package&) ew[nextSite];
 
     BS.Status status = BS.cOK;

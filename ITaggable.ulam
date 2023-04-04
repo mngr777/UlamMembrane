@@ -1,0 +1,13 @@
+quark ITaggable {
+  typedef Bits(8) Tag;
+
+  constant Tag cNO_TAG = 0x0;
+
+  Bool hasTag() {
+    return getTag() != cNO_TAG;
+  }
+
+  virtual Tag getTag();
+
+  virtual Void setTag(Tag tag);
+}

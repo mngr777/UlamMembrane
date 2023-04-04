@@ -54,7 +54,7 @@ quark QBondableT(Unsigned(3) cMAX_BOND_NUM, Unsigned(3) cMAX_DIST = 4) : IBondab
       C2D end = ew.getCoordRaw(bond.mSite) * Drawable.cUNITS_PER_SITE / 2;
 
       ColorUtils cu;
-      ARGB oncol = cu.color(0xffffffff);
+      ARGB oncol = cu.color(0xff999999);
       ARGB offcol = oncol;
 
       drawable.drawMaskedLine(start, end, oncol, offcol, 0xffffffff);

@@ -2,13 +2,14 @@ transient PackageData {
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;
   typedef DataUtils.Integer Integer;
+  typedef ITaggable.Tag Tag;
 
   typedef Unsigned(2) Arity;
   typedef Unsigned(2) Type;
 
   typedef Byte Symbol;
 
-  constant Datum cNODATA = 0x0;
+  constant Datum cNO_DATA = 0x0;
   constant Byte cNIL = 0x0;
 
   constant Type cTYPE_TAG         = 0;
@@ -34,16 +35,23 @@ transient PackageData {
   constant Unsigned cIS_EXEC_SHIFT = 1;
 
   // Aux
-  // (either final result of node evaluation or stored 1st argument)
+  // Non-executable: tag
+  // Executable: either final result of node evaluation or stored 1st argument
   //
-  //  unused       final?  value
+  //  unused  active/final? value
   //   v             v       v
   // | 0 1 2 3 4 5 | 6 | 7 | 0 1 2 3 4 5 6 7
   //                     ^
   //                    has value?
   //
-  constant Byte cIS_FINAL_MASK = 0b00000010;
-  constant Unsigned cIS_FINAL_SHIFT = 1;
+
+  // Aux: non-executable
+  constant Byte cIS_ACTIVE_MASK = 0b00000010;
+  constant Unsigned cIS_ACTIVE_SHIFT = 1;
+
+  // Aux: executable
+  constant Byte cIS_FINAL_MASK = cIS_ACTIVE_MASK;
+  constant Unsigned cIS_FINAL_SHIFT = cIS_ACTIVE_SHIFT;
 
   // Common
   constant Byte cHAS_VALUE_MASK = 0b00000001;
@@ -85,7 +93,27 @@ transient PackageData {
     return setValue(datum, symbol);
   }
 
-  // Aux
+  // Aux (non-executable)
+
+  Tag getTag(Datum datum) {
+    return getValue(datum);
+  }
+
+  Datum setTag(Datum datum, Tag tag) {
+    return setValue(datum, tag);
+  }
+
+  // Aux: non-executable
+
+  Bool isActive(Datum datum) {
+    return (Bool) dd.getHi(datum, cIS_ACTIVE_MASK, cIS_ACTIVE_SHIFT);
+  }
+
+  Datum setIsActive(Datum datum, Bool isActive) {
+    return dd.setHi(datum, (Byte) isActive, cIS_ACTIVE_MASK, cIS_ACTIVE_SHIFT);
+  }
+
+  // Aux: executable
 
   Bool isFinal(Datum datum) {
     return (Bool) dd.getHi(datum, cIS_FINAL_MASK, cIS_FINAL_SHIFT);
