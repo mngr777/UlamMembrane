@@ -1,0 +1,13 @@
+transient EvalFunction : Eval {
+  Arity getArity(Symbol symbol) {
+    return getArgNum(symbol);
+  }
+
+  Arity getArgNum(Symbol symbol) {
+    return 0;
+  }
+
+  Byte eval(QExec& exec, Symbol symbol, Byte arg1, Byte arg2) {
+    return 0x0;
+  }
+}

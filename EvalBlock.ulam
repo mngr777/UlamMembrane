@@ -1,0 +1,15 @@
+transient EvalBlock : Eval {
+  Arity getArity(Symbol symbol) {
+    return 1;
+  }
+
+  Arity getArgNum(Symbol symbol) {
+    return 0;
+  }
+
+  Void enter(QExec& exec, Package& tree, Byte arg) {
+  }
+
+  Void exit(QExec& exec, Package& tree, Byte arg) {
+  }
+}

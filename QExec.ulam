@@ -1,0 +1,326 @@
+local typedef PackageData PD;
+
+local constant Bool cDEBUG = true;
+local constant Bool cDEBUG_REG = false;
+
+element QExec : QStateT(7) + QBondableT(4) {
+  typedef DataUtils.Datum Datum;
+  typedef DataUtils.Byte Byte;
+  typedef DataUtils.Integer Integer;
+
+  typedef PackageData.Arity Arity;
+  typedef PackageData.Type Type;
+  typedef PackageData.Symbol Symbol;
+
+  typedef Unsigned(2) RegIndex;
+
+  constant QBond.Index cPROGRAM = 0;
+  constant QBond.Index cMEMORY  = 1;
+  constant QBond.Index cINPUT   = 2;
+  constant QBond.Index cOUTPUT  = 3;
+
+  constant RegIndex cREG1 = 0;
+  constant RegIndex cREG2 = 1;
+  constant RegIndex cSRC  = 2;
+  constant RegIndex cDST  = 3;
+
+  constant State cSTATE_EXEC = 1;
+
+  Byte mRegs[4];
+
+  // Accessing registers
+
+  Byte get(RegIndex index) {
+    return mRegs[index];
+  }
+
+  Void set(RegIndex index, Byte value) {
+    mRegs[index] = value;
+
+    if (cDEBUG_REG) {
+      DebugUtils du;
+      ExecDebug ed;
+      du.print(ed.getRegName(index));
+      du.print((Unsigned) value);
+    }
+  }
+
+  Integer getInteger(RegIndex index) {
+    DataUtils du;
+    return du.toInteger(mRegs[index]);
+  }
+
+  Void setInteger(RegIndex index, Integer value) {
+    DataUtils du;
+    set(index, du.fromInteger(value));
+  }
+
+  Void step() {
+    // TODO
+  }
+
+  Void init() {
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(cPROGRAM);
+    if (!bond.isAttached())
+      return;
+
+    // Move to root
+    Package& pkg = (Package&) ew[bond.getSiteNumber()];
+    if (!pkg.isRoot()) {
+      bu.traverse(0, cPROGRAM, Package.cUP);
+      return;
+    }
+
+    setState(cSTATE_EXEC);
+  }
+
+  Void exec() {
+    EventWindow ew;
+    DebugUtils du;
+    PackageData pd;
+
+    QBond& bond = getBond(cPROGRAM);
+    if (!bond.isAttached())
+      return;
+
+    // Get current subtree
+    Package& tree = (Package&) ew[bond.getSiteNumber()];
+    Datum data = tree.getData();
+    Datum result = tree.getAux();
+
+    // Check if executable
+    if (!pd.isExec(data)) {
+      if (cDEBUG) du.print("Exec.exec: non-executable");
+      setState(cSTATE_ERROR);
+      return;
+    }
+
+    // Process
+    Type type = pd.getType(data);
+    if (pd.hasValue(result) && pd.isFinal(result)) {
+      complete(tree);
+    } else if (pd.hasValue(result) && type == PD.cTYPE_CONDITIONAL) {
+      branch(tree);
+    } else {
+      evalOrMoveToChild(tree);
+    }
+  }
+
+  Void reset() {
+    DebugUtils du;
+    EventWindow ew;
+
+    Package& tree = (Package&) ew[getBond(cPROGRAM).getSiteNumber()];
+    if (!tree.isRoot()) {
+      DebugUtils du;
+      du.print("Exec.reset: not a root node");
+      setState(cSTATE_ERROR);
+      return;
+    }
+
+    tree.setAux(PD.cNO_DATA);
+    setState(cSTATE_EXEC);
+  }
+
+  Void complete(Package& tree) {
+    BondStatus bs;
+    BondUtils bu;
+    DebugUtils du;
+    EventWindow ew;
+    PackageData pd;
+
+    if (tree.isRoot()) {
+      // Done, wait for reset
+      setState(cSTATE_DONE);
+      return;
+    }
+
+    // Move to parent
+    if (!bs.isOk(bu.traverse(0, cPROGRAM, Package.cUP)))
+      return;
+
+    // Pass the result to parent
+    Datum result = tree.getAux();
+    Package& parent = (Package&) ew[getBond(cPROGRAM).getSiteNumber()];
+    evalOrStoreArgument(parent, pd.getValue(result));
+
+    // Reset child
+    tree.setAux(PD.cNO_DATA);
+  }
+
+  Void branch(Package& tree) {
+    BondUtils bu;
+    PackageData pd;
+
+    Datum result = tree.getAux();
+    Arity branch = (Arity) pd.getValue(result);
+    if (branch == Arity.maxof) {
+      // No branch is selected, done
+      result = pd.setIsFinal(result, true);
+      result = pd.setValue(result, PackageData.cNIL);
+      tree.setAux(result);
+    } else {
+      // Move to selected branch
+      QBond.Index index = (branch == 0u) ? Package.cLEFT : Package.cRIGHT;
+      bu.traverse(0, cPROGRAM, index);
+    }
+  }
+
+  // NOTE:
+  // * assuming eval always succeeds, so there's no need to store the 2nd argument to retry
+  // * also assuming that arguments are always passed in correct order
+  Void evalOrStoreArgument(Package& tree, Byte arg) {
+    PackageData pd;
+
+    Datum data = tree.getData();
+    Datum result = tree.getAux();
+
+    Arity argNumRequired = getArgNum(tree);
+
+    Bool hasArg = pd.hasValue(result);
+    Byte stored = hasArg ? pd.getValue(result) : PD.cNIL;
+
+    if (argNumRequired > 1 && hasArg) {
+      // Function with 2 parameters, have to evaluate now while we have both
+      eval(tree, stored, arg);
+
+    } else if (argNumRequired > 0 && !hasArg) {
+      // Store 1st argument
+      result = pd.setIsFinal(result, false);
+      result = pd.setValue(result, arg);
+      tree.setAux(result);
+
+    } else {
+      // Zero arguments required or one is require and one is already stored.
+      // This normally happens when either:
+      // * subtree is a conditional and selected branch returns;
+      // * subtree is a block and it's body returns.
+      // Set value as final result, exit block if required.
+
+      if (pd.getType(data) == PD.cTYPE_BLOCK) {
+        // Exit from block
+        EvalBlock eb;
+        eb.exit(self, tree, arg);
+      }
+      result = pd.setIsFinal(result, true);
+      result = pd.setValue(result, arg);
+      tree.setAux(result);
+    }
+  }
+
+  Void evalOrMoveToChild(Package& tree) {
+    BondStatus bs;
+    BondUtils bu;
+    PackageData pd;
+
+    Datum data = tree.getData();
+    Datum result = tree.getAux();
+
+    Arity argNumRequired = getArgNum(tree);
+
+    Bool hasArg = pd.hasValue(result);
+    Arity argNum = hasArg ? 1u : 0u;
+    Byte stored = hasArg ? pd.getValue(result) : PD.cNIL;
+
+    if (argNum >= argNumRequired) {
+      if (pd.getType(data) == PD.cTYPE_BLOCK) {
+        // Block, enter once _and_ move to child
+        QBond.Index index = hasArg ? Package.cLEFT : Package.cRIGHT;
+        if (bs.isOk(bu.traverse(0, cPROGRAM, index))) {
+          EvalBlock eb;
+          eb.enter(self, tree, stored);
+        }
+
+      } else {
+        // Conditional/function/constant
+        eval(tree, stored, PD.cNIL);
+      }
+
+    } else {
+      QBond.Index index = hasArg ? Package.cLEFT : Package.cRIGHT;
+      bu.traverse(0, cPROGRAM, index);
+    }
+  }
+
+  Void eval(Package& tree, Byte arg1, Byte arg2) {
+    PackageData pd;
+
+    Datum data = tree.getData();
+    Type type = pd.getType(data);
+
+    if (type == PD.cTYPE_CONDITIONAL) {
+      evalConditional(tree, arg1);
+
+    } else if (type == PD.cTYPE_FUNCTION) {
+      evalFunction(tree, arg1, arg2);
+
+    } else if (type == PD.cTYPE_CONSTANT) {
+      Byte value = pd.getValue(data);
+      Datum result = PD.cNO_DATA;
+      result = pd.setIsFinal(result, true);
+      result = pd.setValue(result, value);
+      tree.setAux(result);
+
+    } else {
+      DebugUtils du;
+      du.print("Exec.eval: unexpected type");
+      setState(cSTATE_ERROR);
+    }
+  }
+
+  Void evalConditional(Package& tree, Byte arg1) {
+    EvalConditional ec;
+    PackageData pd;
+
+    Symbol symbol = pd.getSymbol(tree.getData());
+    Arity branch = ec.eval(self, symbol, arg1);
+
+    // Store selected branch as argument/non-final value
+    Datum result = tree.getAux();
+    result = pd.setIsFinal(result, false);
+    result = pd.setValue(result, branch);
+    tree.setAux(result);
+  }
+
+  Void evalFunction(Package& tree, Byte arg1, Byte arg2) {
+    EvalFunction ef;
+    PackageData pd;
+
+    Symbol symbol = pd.getSymbol(tree.getData());
+    Byte value = ef.eval(self, symbol, arg1, arg2);
+
+    // Store result value as final
+    Datum result = tree.getAux();
+    result = pd.setIsFinal(result, true);
+    result = pd.setValue(result, value);
+    tree.setAux(result);
+  }
+
+  Arity getArgNum(Package& tree) {
+    PackageData pd;
+    Datum data = tree.getData();
+    return getArgNum(pd.getType(data), pd.getSymbol(data));
+  }
+
+  Arity getArgNum(Type type, Symbol symbol) {
+    if (type == PD.cTYPE_CONDITIONAL) {
+      EvalConditional ec;
+      return ec.getArgNum(symbol);
+
+    } else if (type == PD.cTYPE_FUNCTION) {
+      EvalFunction ef;
+      return ef.getArgNum(symbol);
+
+    } else if (type == PD.cTYPE_CONSTANT) {
+      return 0;
+    }
+
+    DebugUtils du;
+    du.print("TreeExec.getArgNum: unexpected type");
+    return 0;
+  }
+}
+

@@ -1,0 +1,7 @@
+transient ExecMemory {
+  typedef QExec.State State;
+
+  Void exec(QExec& exec) {
+
+  }
+}

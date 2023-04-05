@@ -1,0 +1,8 @@
+transient Eval {
+  typedef DataUtils.Datum Datum;
+  typedef DataUtils.Byte Byte;
+  typedef DataUtils.Integer Integer;
+
+  typedef PackageData.Arity Arity;
+  typedef PackageData.Symbol Symbol;
+}

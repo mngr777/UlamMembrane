@@ -1,0 +1,9 @@
+transient ExecDebug {
+  typedef QExec.RegIndex RegIndex;
+
+  String mRegNames[4] = {"reg-1", "reg-2", "src", "dst"};
+
+  String getRegName(Unsigned index) {
+    return mRegNames[index];
+  }
+}

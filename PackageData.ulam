@@ -12,7 +12,7 @@ transient PackageData {
   constant Datum cNO_DATA = 0x0;
   constant Byte cNIL = 0x0;
 
-  constant Type cTYPE_TAG         = 0;
+  constant Type cTYPE_BLOCK       = 0;
   constant Type cTYPE_FUNCTION    = 1;
   constant Type cTYPE_CONDITIONAL = 2;
   constant Type cTYPE_CONSTANT    = 3;

@@ -1,7 +1,7 @@
 /**
    Basic state machine template
  */
-quark QStateT(Unary(8) cSTATE_BITS = 4) {
+quark QStateT(Unary(10) cSTATE_BITS = 4) {
   typedef Unsigned(cSTATE_BITS) State;
 
   constant State cSTATE_INIT  = 0;

@@ -1,0 +1,13 @@
+transient EvalConditional : Eval {
+  Arity getArity(Symbol symbol) {
+    return 0;
+  }
+
+  Arity getArgNum(Symbol symbol) {
+    return 0;
+  }
+
+  Arity eval(QExec& exec, Symbol symbol, Byte arg) {
+    return 0;
+  }
+}
