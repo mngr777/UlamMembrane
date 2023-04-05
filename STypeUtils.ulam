@@ -1,3 +1,7 @@
+/**
+   Static (stable?) type value that can be used
+   to search for or build atoms.
+ */
 transient STypeUtils {
   typedef EventWindow.SiteNum SiteNum;
   typedef Unsigned SType;

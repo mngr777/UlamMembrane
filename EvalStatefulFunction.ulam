@@ -1,0 +1,21 @@
+transient EvalStatefulFunction : Eval {
+  typedef QExec.State State;
+
+  constant State cSTATE_FIRST    = 8;
+  constant State cSTATE_TRAVERSE = cSTATE_FIRST;
+  constant State cSTATE_LAST = cSTATE_TRAVERSE;
+
+  Byte eval(QExec& exec, Package& tree, Bool& success) {
+    if (exec.isState(cSTATE_TRAVERSE)) {
+      success = traverse(exec);
+    }
+
+    return 0x0;
+  }
+
+  Bool traverse(QExec& exec) {
+    Index index = getBondIndex(exec, cSRC);
+    Index indexNext = getBondIndex(exec, cDST);
+    return bs.isOk(bu.traverse(0, index, indexNext));
+  }
+}

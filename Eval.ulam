@@ -1,4 +1,10 @@
 transient Eval {
+  typedef EventWindow.SiteNum SiteNum;
+  typedef WindowServices.Radius Radius;
+
+  typedef QBond.Index Index;
+  typedef QExec.RegIndex RegIndex;
+
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;
   typedef DataUtils.Integer Integer;
@@ -6,17 +12,44 @@ transient Eval {
   typedef PackageData.Arity Arity;
   typedef PackageData.Symbol Symbol;
 
+  typedef STypeUtils.SType SType;
+
+  constant RegIndex cREG1 = QExec.cREG1;
+  constant RegIndex cREG2 = QExec.cREG2;
+  constant RegIndex cSRC  = QExec.cSRC;
+  constant RegIndex cDST  = QExec.cDST;
+
   BondStatus bs;
   BondUtils bu;
+  DataUtils du;
   PackageData pd;
+  STypeUtils stu;
 
-  QBond.Index getSrcIndex(QExec& exec) {
-    Integer index = exec.getInteger(QExec.cSRC);
-    if (0 > index || index > QBond.Index.maxof) {
-      DebugUtils du;
-      du.print("Invalid source index:");
-      du.print(index);
+  SiteNum toSiteNumber(Byte value) {
+    return (SiteNum) value;
+  }
+
+  SiteNum getSiteNumber(QExec& exec, RegIndex regIndex) {
+    return (SiteNum) exec.getInteger(regIndex);
+  }
+
+  Index toBondIndex(Byte value) {
+    Integer index = du.toInteger(value);
+    checkBondIndex(index);
+    return (Index) index;
+  }
+
+  Index getBondIndex(QExec& exec, RegIndex regIndex) {
+    Integer index = exec.getInteger(regIndex);
+    checkBondIndex(index);
+    return (Index) index;
+  }
+
+  Void checkBondIndex(Integer index) {
+    if (0 > index || index > Index.maxof) {
+      DebugUtils dbg;
+      dbg.print("Invalid bond index:");
+      dbg.print(index);
     }
-    return (QBond.Index) index;
   }
 }

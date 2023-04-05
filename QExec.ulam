@@ -1,3 +1,4 @@
+local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
 element QExec : QStateT(7) + QBondableT(4) {
@@ -56,7 +57,13 @@ element QExec : QStateT(7) + QBondableT(4) {
   }
 
   Void step() {
-    // TODO
+    if (isState(cSTATE_INIT)) {
+      init();
+    } else if (isState(cSTATE_EXEC)) {
+      exec();
+    } else if (ESF.cSTATE_FIRST <= getState() && getState() <= ESF.cSTATE_LAST) {
+      execStateful();
+    }
   }
 
   Void init() {
@@ -106,6 +113,30 @@ element QExec : QStateT(7) + QBondableT(4) {
       branch(tree);
     } else {
       evalOrMoveToChild(tree);
+    }
+  }
+
+  Void execStateful() {
+    EvalStatefulFunction esf;
+    EventWindow ew;
+    PackageData pd;
+
+    QBond& bond = getBond(cPROGRAM);
+    if (!bond.isAttached())
+      return;
+
+    Package& tree = (Package&) ew[bond.getSiteNumber()];
+    Bool done = false;
+    Byte value = esf.eval(self, tree, done);
+    if (done) {
+      // Set final value
+      Datum result = tree.getAux();
+      result = pd.setIsFinal(result, true);
+      result = pd.setValue(result, value);
+      tree.setAux(result);
+
+      // Continue
+      setState(cSTATE_EXEC);
     }
   }
 

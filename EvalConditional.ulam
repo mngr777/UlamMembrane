@@ -24,7 +24,7 @@ transient EvalConditional : Eval {
       cond = (exec.getInteger(QExec.cREG1) != 0);
 
     } else if (symbol == cIF_ATTACHED) {
-      cond = exec.getBond(getSrcIndex(exec)).isAttached();
+      cond = exec.getBond(getBondIndex(exec, cSRC)).isAttached();
     }
 
     if (getArgNum(symbol) == 1)
