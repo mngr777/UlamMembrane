@@ -1,8 +1,5 @@
 local typedef PackageData PD;
 
-local constant Bool cDEBUG = true;
-local constant Bool cDEBUG_REG = false;
-
 element QExec : QStateT(7) + QBondableT(4) {
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;
@@ -13,6 +10,9 @@ element QExec : QStateT(7) + QBondableT(4) {
   typedef PackageData.Symbol Symbol;
 
   typedef Unsigned(2) RegIndex;
+
+  constant Bool cDEBUG = true;
+  constant Bool cDEBUG_REG = false;
 
   constant QBond.Index cPROGRAM = 0;
   constant QBond.Index cMEMORY  = 1;
@@ -26,7 +26,7 @@ element QExec : QStateT(7) + QBondableT(4) {
 
   constant State cSTATE_EXEC = 1;
 
-  Byte mRegs[4];
+  Byte mRegs[4] = {0x0, 0x0, 0x0, 0x0};
 
   // Accessing registers
 
@@ -230,8 +230,15 @@ element QExec : QStateT(7) + QBondableT(4) {
         // Block, enter once _and_ move to child
         QBond.Index index = hasArg ? Package.cLEFT : Package.cRIGHT;
         if (bs.isOk(bu.traverse(0, cPROGRAM, index))) {
+          // Enter the block
           EvalBlock eb;
           eb.enter(self, tree, stored);
+
+          // Ensure a non-final value is stored
+          result = tree.getAux(); // re-read
+          result = pd.setIsFinal(result, false);
+          if (!pd.hasValue(result))
+            result = pd.setValue(result, PD.cNIL);
         }
 
       } else {

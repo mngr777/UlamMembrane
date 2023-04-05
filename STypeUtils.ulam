@@ -1,0 +1,51 @@
+transient STypeUtils {
+  typedef EventWindow.SiteNum SiteNum;
+  typedef Unsigned SType;
+
+  constant SType cEMPTY    = 0;
+  constant SType cDEFAULT  = 1;
+  constant SType cPACKAGE  = 2;
+  constant SType cMEMBRANE = 3;
+
+  AtomUtils au;
+  EventWindow ew;
+
+  SType getSType(SiteNum site) {
+    return getSType(ew[site]);
+  }
+
+  SType getSType(C2D coord) {
+    return getSType(ew[coord]);
+  }
+
+  SType getSType(Atom& atom) {
+    if (au.isEmpty(atom))
+      return cEMPTY;
+    if (atom is Package)
+      return cPACKAGE;
+    if (atom is Membrane)
+      return cMEMBRANE;
+
+    return cDEFAULT;
+  }
+
+  Atom make(SType stype) {
+    if (stype == cEMPTY) {
+      Empty atom;
+      return atom;
+    }
+    if (stype == cPACKAGE) {
+      Package atom;
+      return atom;
+    }
+    if (stype == cMEMBRANE) {
+      Membrane atom;
+      return atom;
+    }
+  }
+
+  Unsigned getType(SType stype) {
+    Atom atom = make(stype);
+    return (Unsigned) au.getType(atom);
+  }
+}

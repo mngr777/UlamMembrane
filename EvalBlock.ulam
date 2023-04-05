@@ -1,4 +1,7 @@
 transient EvalBlock : Eval {
+  constant Symbol cWITH_INPUT  = 0x1;
+  constant Symbol cWITH_OUTPUT = 0x2;
+
   Arity getArity(Symbol symbol) {
     return 1;
   }
@@ -8,8 +11,34 @@ transient EvalBlock : Eval {
   }
 
   Void enter(QExec& exec, Package& tree, Byte arg) {
+    Symbol symbol = pd.getSymbol(tree.getData());
+
+    if (symbol == cWITH_INPUT ||
+        symbol == cWITH_OUTPUT)
+    {
+      QBond.Index index = QExec.cINPUT;
+      if (symbol == cWITH_OUTPUT)
+        index = QExec.cOUTPUT;
+
+      Byte old = exec.get(QExec.cSRC);
+      exec.set(QExec.cSRC, (Byte) index);
+
+      // Store old value in tree node
+      Datum result = tree.getAux();
+      result = pd.setValue(result, old);
+    }
   }
 
   Void exit(QExec& exec, Package& tree, Byte arg) {
+    Symbol symbol = pd.getSymbol(tree.getData());
+
+    if (symbol == cWITH_INPUT ||
+        symbol == cWITH_OUTPUT)
+    {
+      // Restore old value
+      Datum result = tree.getAux();
+      Byte old = pd.getValue(result);
+      exec.set(QExec.cSRC, old);
+    }
   }
 }

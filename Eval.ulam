@@ -5,4 +5,18 @@ transient Eval {
 
   typedef PackageData.Arity Arity;
   typedef PackageData.Symbol Symbol;
+
+  BondStatus bs;
+  BondUtils bu;
+  PackageData pd;
+
+  QBond.Index getSrcIndex(QExec& exec) {
+    Integer index = exec.getInteger(QExec.cSRC);
+    if (0 > index || index > QBond.Index.maxof) {
+      DebugUtils du;
+      du.print("Invalid source index:");
+      du.print(index);
+    }
+    return (QBond.Index) index;
+  }
 }
