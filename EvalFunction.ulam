@@ -10,16 +10,15 @@ transient EvalFunction : Eval {
   constant Symbol cGET_SRC              = 0x07;
   constant Symbol cGET_DST              = 0x08;
 
-  constant Symbol cATTACH_TO            = 0x11;
-  constant Symbol cDETACH               = 0x12;
+  constant Symbol cPROG2                = 0x11;
 
-  constant Symbol cTRAVERSE             = 0x13;
-  constant Symbol cTRAVERSE_1           = 0x14;
-  constant Symbol cTRAVERSE_2           = 0x15;
-  constant Symbol cTRAVERSE_3           = 0x16;
+  constant Symbol cATTACH_TO            = 0x21;
+  constant Symbol cDETACH               = 0x22;
 
-  constant Symbol cFIND_TYPE            = 0x21;
-  constant Symbol cFIND_TYPE_RADIUS     = 0x22;
+  constant Symbol cTRAVERSE             = 0x23;
+  constant Symbol cTRAVERSE_1           = 0x24;
+  constant Symbol cTRAVERSE_2           = 0x25;
+  constant Symbol cTRAVERSE_3           = 0x26;
 
   Arity getArity(Symbol symbol) {
     return getArgNum(symbol);
@@ -35,9 +34,11 @@ transient EvalFunction : Eval {
     {
       return 1;
     }
-    if (symbol == cFIND_TYPE_RADIUS) {
+
+    if (symbol == cPROG2) {
       return 2;
     }
+
     return 0;
   }
 
@@ -74,10 +75,13 @@ transient EvalFunction : Eval {
       if (cDEBUG) dbg.print("(get-dst)");
       return exec.get(cDST);
 
+    } else if (symbol == cPROG2) {
+      // no debug output
+      return arg2;
 
     } else if (symbol == cATTACH_TO) {
       if (cDEBUG) dbg.print("(attach-to)");
-      return (Byte) attach(exec, toSiteNumber(arg1));
+      return (Byte) attach(exec, findSType(exec, (SType) arg1));
 
     } else if (symbol == cDETACH) {
       if (cDEBUG) dbg.print("(detach)");
@@ -100,14 +104,9 @@ transient EvalFunction : Eval {
       if (cDEBUG) dbg.print("(traverse-3)");
       traverse(exec, 3);
 
-
-    } else if (symbol == cFIND_TYPE) {
-      if (cDEBUG) dbg.print("(find-type)");
-      return (Byte) findType(exec, (SType) arg1);
-
-    } else if (symbol == cFIND_TYPE_RADIUS) {
-      if (cDEBUG) dbg.print("(find-type-radius)");
-      return (Byte) findTypeRadius(exec, (SType) arg1, (Radius) arg2);
+    } else {
+      dbg.print("EvalFunction.eval: Unknown symbol:");
+      dbg.print((Unsigned) symbol);
     }
 
     return 0x0;
@@ -115,6 +114,8 @@ transient EvalFunction : Eval {
 
 
   Bool attach(Exec& exec, SiteNum siteOther) {
+    if (siteOther == 0u)
+      return false;
     Index index = getBondIndex(exec, cSRC);
     return bs.isOk(bu.attach(0, index, siteOther, 0));
   }
@@ -129,11 +130,12 @@ transient EvalFunction : Eval {
     exec.setState(ESF.cSTATE_TRAVERSE);
   }
 
-  SiteNum findType(Exec& exec, SType type) {
-    return findTypeRadius(exec, type, 4u);
+  SiteNum findSType(Exec& exec, SType type) {
+    Atom atom = stu.make(type);
+    return findSTypeRadius(exec, type, bu.maxDist((IBondable&) atom, exec));
   }
 
-  SiteNum findTypeRadius(Exec& exec, SType type, Radius radius) {
+  SiteNum findSTypeRadius(Exec& exec, SType type, Radius radius) {
     WindowServices ws;
     ws.reset(1u, radius);
     for (Int s = ws.next(); s >= 0; s = ws.next()) {

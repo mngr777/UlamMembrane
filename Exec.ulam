@@ -1,3 +1,4 @@
+local typedef BondStatus BS;
 local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
@@ -14,6 +15,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
 
   constant Bool cDEBUG = true;
   constant Bool cDEBUG_REG = false;
+  constant Bool cDEBUG_TRAVERSE = true;
 
   constant QBond.Index cPROGRAM = 0;
   constant QBond.Index cMEMORY  = 1;
@@ -44,10 +46,10 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
     mRegs[index] = value;
 
     if (cDEBUG_REG) {
-      DebugUtils du;
+      DebugUtils dbg;
       ExecDebug ed;
-      du.print(ed.getRegName(index));
-      du.print((Unsigned) value);
+      dbg.print(ed.getRegName(index));
+      dbg.print((Unsigned) value);
     }
   }
 
@@ -64,8 +66,13 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   Void step() {
     if (isState(cSTATE_INIT)) {
       init();
+
     } else if (isState(cSTATE_EXEC)) {
       exec();
+
+    } else if (isState(cSTATE_DONE)) {
+      reset();
+
     } else if (ESF.cSTATE_FIRST <= getState() && getState() <= ESF.cSTATE_LAST) {
       execStateful();
     }
@@ -91,7 +98,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
 
   Void exec() {
     EventWindow ew;
-    DebugUtils du;
+    DebugUtils dbg;
     PackageData pd;
 
     QBond& bond = getBond(cPROGRAM);
@@ -105,7 +112,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
 
     // Check if executable
     if (!pd.isExec(data)) {
-      if (cDEBUG) du.print("Exec.exec: non-executable");
+      if (cDEBUG) dbg.print("Exec.exec: non-executable");
       setState(cSTATE_ERROR);
       return;
     }
@@ -146,13 +153,13 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   }
 
   Void reset() {
-    DebugUtils du;
+    DebugUtils dbg;
     EventWindow ew;
 
     Package& tree = (Package&) ew[getBond(cPROGRAM).getSiteNumber()];
     if (!tree.isRoot()) {
-      DebugUtils du;
-      du.print("Exec.reset: not a root node");
+      DebugUtils dbg;
+      dbg.print("Exec.reset: not a root node");
       setState(cSTATE_ERROR);
       return;
     }
@@ -164,7 +171,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   Void complete(Package& tree) {
     BondStatus bs;
     BondUtils bu;
-    DebugUtils du;
+    DebugUtils dbg;
     EventWindow ew;
     PackageData pd;
 
@@ -250,6 +257,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   Void evalOrMoveToChild(Package& tree) {
     BondStatus bs;
     BondUtils bu;
+    DebugUtils dbg;
     PackageData pd;
 
     Datum data = tree.getData();
@@ -261,11 +269,13 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
     Arity argNum = hasArg ? 1u : 0u;
     Byte stored = hasArg ? pd.getValue(result) : PD.cNIL;
 
+    BS.Status status = BS.cOK;
     if (argNum >= argNumRequired) {
       if (pd.getType(data) == PD.cTYPE_BLOCK) {
         // Block, enter once _and_ move to child
-        QBond.Index index = hasArg ? Package.cLEFT : Package.cRIGHT;
-        if (bs.isOk(bu.traverse(0, cPROGRAM, index))) {
+        QBond.Index index = !hasArg ? Package.cLEFT : Package.cRIGHT;
+        status = bu.traverse(0, cPROGRAM, index);
+        if (bs.isOk(status)) {
           // Enter the block
           EvalBlock eb;
           eb.enter(self, tree, stored);
@@ -275,6 +285,10 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
           result = pd.setIsFinal(result, false);
           if (!pd.hasValue(result))
             result = pd.setValue(result, PD.cNIL);
+
+        } else if (cDEBUG_TRAVERSE && status != BS.cINACCESSIBLE) {
+          dbg.print("Exec.evalOrMoveToChild: failed to traverse to block body, status:");
+          dbg.print(bs.toString(status));
         }
 
       } else {
@@ -283,8 +297,12 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
       }
 
     } else {
-      QBond.Index index = hasArg ? Package.cLEFT : Package.cRIGHT;
-      bu.traverse(0, cPROGRAM, index);
+      QBond.Index index = !hasArg ? Package.cLEFT : Package.cRIGHT;
+      status = bu.traverse(0, cPROGRAM, index);
+      if (cDEBUG_TRAVERSE && !bs.isOk(status) && status != BS.cINACCESSIBLE) {
+        dbg.print("Exec.evalOrMoveToChild: failed to traverse to child, status:");
+        dbg.print(bs.toString(status));
+      }
     }
   }
 
@@ -308,8 +326,8 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
       tree.setAux(result);
 
     } else {
-      DebugUtils du;
-      du.print("Exec.eval: unexpected type");
+      DebugUtils dbg;
+      dbg.print("Exec.eval: unexpected type");
       setState(cSTATE_ERROR);
     }
   }
@@ -349,7 +367,11 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   }
 
   Arity getArgNum(Type type, Symbol symbol) {
-    if (type == PD.cTYPE_CONDITIONAL) {
+    if (type == PD.cTYPE_BLOCK) {
+      EvalBlock eb;
+      return eb.getArgNum(symbol);
+
+    } else if (type == PD.cTYPE_CONDITIONAL) {
       EvalConditional ec;
       return ec.getArgNum(symbol);
 
@@ -361,8 +383,8 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
       return 0;
     }
 
-    DebugUtils du;
-    du.print("TreeExec.getArgNum: unexpected type");
+    DebugUtils dbg;
+    dbg.print("TreeExec.getArgNum: unexpected type");
     return 0;
   }
 }

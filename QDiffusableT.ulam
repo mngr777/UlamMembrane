@@ -69,6 +69,7 @@ quark QDiffusableT(IDiffusable.Diffusability cDIFFUSABILITY, WindowServices.Radi
   }
 
   Diffusability getCompleteDiffusability() {
-    return 1000;
+    // return 1000;
+    return 100;
   }
 }

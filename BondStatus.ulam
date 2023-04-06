@@ -14,4 +14,28 @@ transient BondStatus {
   Bool isOk(Status status) {
     return status == cOK;
   }
+
+  String toString(Status status) {
+    if (status == cOK) {
+      return "cOK";
+    } else if (status == cERROR) {
+      return "cERROR";
+    } else if (status == cINACCESSIBLE) {
+      return "cINACCESSIBLE";
+    } else if (status == cNOT_ATTACHED) {
+      return "cNOT_ATTACHED";
+    } else if (status == cIS_ATTACHED) {
+      return "cIS_ATTACHED";
+    } else if (status == cOTHER_IS_ATTACHED) {
+      return "cOTHER_IS_ATTACHED";
+    } else if (status == cNOT_BONDABLE) {
+      return "cNOT_BONDABLE";
+    } else if (status == cDISTANCE_EXCEEDS_MAX) {
+      return "cDISTANCE_EXCEEDS_MAX";
+    } else if (status == cNO_NEXT) {
+      return "cNO_NEXT";
+    } else {
+      return "unknown status";
+    }
+  }
 }

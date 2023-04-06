@@ -94,4 +94,53 @@ transient BondUtils + Fail {
     }
     return status;
   }
+
+
+  Status replace(C2D coord, Index index, C2D subCoord, Index subIndex) {
+    SiteNum site = ew.getSiteNumberRaw(coord);
+    SiteNum subSite = ew.getSiteNumberRaw(subCoord);
+    return replace(site, index, subSite, subIndex);
+  }
+
+  Status replace(SiteNum site, Index index, SiteNum subSite, Index subIndex) {
+    if (!ew.isAccessible(site) || !ew.isAccessible(subSite))
+      return BS.cINACCESSIBLE;
+
+    // Object whose attachment we're replacing
+    IBondable& obj = (IBondable&) ew[site];
+    QBond& objBond = obj.getBond(index);
+
+    // Attachment
+    Bool isAttached = objBond.isAttached(); // is there anything to replace?
+    SiteNum attachmentSite = objBond.getSiteNumber(); // remember in case we need to re-attach
+    Index attachmentIndex = objBond.getIndex();       // +
+    if (isAttached && !ew.isAccessible(attachmentSite))
+      return BS.cINACCESSIBLE;
+
+    // Substitute
+    IBondable& sub = (IBondable&) ew[subSite];
+    QBond& subBond = sub.getBond(subIndex);
+    if (subBond.isAttached())
+      return BS.cIS_ATTACHED; // substitute is already attached to something with same bond
+
+    Status status = BS.cOK;
+
+    // Detach
+    if (isAttached) {
+      status = objBond.detach(site);
+      if (!bs.isOk(status))
+        return status;
+    }
+
+    // Attach the substitute
+    status = objBond.attach(site, index, subSite, subIndex);
+    if (!bs.isOk(status)) {
+      if (isAttached) {
+        // re-attach
+        if (!bs.isOk(objBond.attach(site, index, attachmentSite, attachmentIndex)))
+          fail("BondUtils.replace: failed to re-attach"); // that shouldn't happen
+      }
+    }
+    return status;
+  }
 }

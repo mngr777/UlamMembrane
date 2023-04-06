@@ -31,12 +31,11 @@ element Demo : QStateT(3) + QBondableT(1) + QMortal {
     Demo_SequenceData data;
 
     SequenceBuilder builder;
-    if (builder.buildNext(self, 0, data.items[mCount], data.items[mCount + 1u]))
-      mCount += 2u;
+    if (builder.buildNext(self, 0, data.getData(mCount), data.getAux(mCount)))
+      mCount++;
 
     if (mCount >= data.cSIZE)
       setState(cSTATE_DONE);
-
   }
 }
 
@@ -84,8 +83,13 @@ element Demo_TreeBuilder : QTreeBuilder + QBondableT(2) + QDiffusableT(100) + QM
 
     QBond& bond = getBond(cTREE);
     Package& tree = (Package&) ew[bond.getSiteNumber()];
-    if (!tree.isRoot())
+
+    if (tree.isRoot()) {
+      setState(cSTATE_ATTACH_EXEC);
+
+    } else {
       bu.traverse(0, cTREE, Package.cUP);
+    }
   }
 
   Void attachExec() {
@@ -105,8 +109,8 @@ element Demo_TreeBuilder : QTreeBuilder + QBondableT(2) + QDiffusableT(100) + QM
       return;
     ew[site] = exec;
 
-    // Attach to program
-    BS.Status status = bu.attach(site, Exec.cPROGRAM, treeSite, Package.cCOMMON);
+    // Replace ourselves with exec
+    BS.Status status = bu.replace(treeSite, Package.cCOMMON, site, Exec.cPROGRAM);
     if (!bs.isOk(status)) {
       Empty empty;
       ew[site] = empty;
@@ -343,19 +347,88 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
 }
 
 
+/**
+   (with-input
+     (if-attached
+       (traverse-3) ; next membrane
+       (attach-to
+         3) ; membrane stype
+ */
 transient Demo_SequenceData {
   typedef DataUtils.Datum Datum;
+  typedef DataUtils.Byte Byte;
   typedef ITaggable.Tag Tag;
+  typedef PackageData.Arity Arity;
+  typedef PackageData.Type Type;
+  typedef PackageData.Symbol Symbol;
+
+  typedef EvalBlock EB;
+  typedef EvalConditional EC;
+  typedef EvalFunction EF;
+
+  typedef Bits(Type.sizeof + Byte.sizeof) Item ;
+
+  constant Item cBLCK = (Item) PD.cTYPE_BLOCK << Byte.sizeof;
+  constant Item cFUNC = (Item) PD.cTYPE_FUNCTION << Byte.sizeof;
+  constant Item cCOND = (Item) PD.cTYPE_CONDITIONAL << Byte.sizeof;
+  constant Item cCNST = (Item) PD.cTYPE_CONSTANT << Byte.sizeof;
+
+  constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
   constant Unsigned cSIZE = 6;
 
-  constant Unsigned cMETA_SHIFT = PD.Byte.sizeof;
-  constant Datum cIS_ACTIVE = (0x1 << PD.cIS_ACTIVE_SHIFT) << cMETA_SHIFT;
-  constant Datum cHAS_VALUE = (0x1 << PD.cHAS_VALUE_SHIFT) << cMETA_SHIFT;
+  PackageData pd;
 
-  Datum items[cSIZE] = {
-    PD.cNO_DATA, PD.cNO_DATA | cIS_ACTIVE | cHAS_VALUE | (Tag) 0x1,
-    PD.cNO_DATA, PD.cNO_DATA,
-    PD.cNO_DATA, PD.cNO_DATA
+  EvalBlock eb;
+  EvalConditional ec;
+  EvalFunction ef;
+
+  Item items[cSIZE * 2] = {
+    /*  */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x1,
+    /*    */ cCOND | EC.cIF_ATTACHED, 0x0,
+    /*      */ cFUNC | EF.cTRAVERSE_3, 0x0,
+    /*      */ cFUNC | EF.cATTACH_TO, 0x0,
+    /*        */ cCNST | (Byte) 3, 0x0
   };
+
+  Datum getData(Unsigned i) {
+    Item item = items[i * 2u];
+
+    Type type = (Type) (item >> Byte.sizeof);
+    Byte value = (Byte) item;
+    Arity arity = getArity(type, (Symbol) value);
+
+    Datum data = PD.cNO_DATA;
+    data = pd.setArity(data, arity);
+    data = pd.setType(data, type);
+    data = pd.setValue(data, value);
+    return data;
+  }
+
+  Datum getAux(Unsigned i) {
+    Item item = items[i * 2u + 1u];
+
+    Tag tag = (Tag) item;
+    Bool isActive = (item & cACTIVE) != 0x0;
+
+    Datum data = PD.cNO_DATA;
+    if (tag != 0x0) {
+      data = pd.setTag(data, tag);
+      data = pd.setIsActive(data, isActive);
+    }
+    return data;
+  }
+
+  Arity getArity(Type type, Symbol symbol) {
+    Arity arity = 0;
+    if (type == PD.cTYPE_BLOCK) {
+      arity = eb.getArity(symbol);
+    } else if (type == PD.cTYPE_CONDITIONAL) {
+      arity = ec.getArity(symbol);
+    } else if (type == PD.cTYPE_FUNCTION) {
+      arity = ef.getArity(symbol);
+    }
+    return arity;
+  }
 }
+

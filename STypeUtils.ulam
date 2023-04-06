@@ -2,7 +2,7 @@
    Static (stable?) type value that can be used
    to search for or build atoms.
  */
-transient STypeUtils {
+transient STypeUtils + Fail {
   typedef EventWindow.SiteNum SiteNum;
   typedef Unsigned SType;
 
@@ -34,10 +34,6 @@ transient STypeUtils {
   }
 
   Atom make(SType stype) {
-    if (stype == cEMPTY) {
-      Empty atom;
-      return atom;
-    }
     if (stype == cPACKAGE) {
       Package atom;
       return atom;
@@ -46,6 +42,12 @@ transient STypeUtils {
       Membrane atom;
       return atom;
     }
+
+    // keeping compiler happy by always returning something
+    if (stype != cEMPTY)
+      fail("unknown SType");
+    Empty atom;
+    return atom;
   }
 
   Unsigned getType(SType stype) {
