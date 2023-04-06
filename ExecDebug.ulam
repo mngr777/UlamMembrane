@@ -1,5 +1,5 @@
 transient ExecDebug {
-  typedef QExec.RegIndex RegIndex;
+  typedef Exec.RegIndex RegIndex;
 
   String mRegNames[4] = {"reg-1", "reg-2", "src", "dst"};
 

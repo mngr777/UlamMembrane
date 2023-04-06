@@ -1,7 +1,7 @@
 local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
-element QExec : QStateT(7) + QBondableT(4) {
+element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;
   typedef DataUtils.Integer Integer;
@@ -28,6 +28,11 @@ element QExec : QStateT(7) + QBondableT(4) {
   constant State cSTATE_EXEC = 1;
 
   Byte mRegs[4] = {0x0, 0x0, 0x0, 0x0};
+
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
 
   // Accessing registers
 

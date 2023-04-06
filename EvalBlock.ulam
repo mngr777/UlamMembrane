@@ -10,18 +10,23 @@ transient EvalBlock : Eval {
     return 0;
   }
 
-  Void enter(QExec& exec, Package& tree, Byte arg) {
+  Void enter(Exec& exec, Package& tree, Byte arg) {
     Symbol symbol = pd.getSymbol(tree.getData());
 
     if (symbol == cWITH_INPUT ||
         symbol == cWITH_OUTPUT)
     {
-      QBond.Index index = QExec.cINPUT;
-      if (symbol == cWITH_OUTPUT)
-        index = QExec.cOUTPUT;
+      QBond.Index index;
+      if (symbol == cWITH_INPUT) {
+        if (cDEBUG) dbg.print("(with-output)");
+        index = Exec.cINPUT;
+      } else {
+        if (cDEBUG) dbg.print("(with-input)");
+        index = Exec.cOUTPUT;
+      }
 
-      Byte old = exec.get(QExec.cSRC);
-      exec.set(QExec.cSRC, (Byte) index);
+      Byte old = exec.get(Exec.cSRC);
+      exec.set(Exec.cSRC, (Byte) index);
 
       // Store old value in tree node
       Datum result = tree.getAux();
@@ -29,16 +34,24 @@ transient EvalBlock : Eval {
     }
   }
 
-  Void exit(QExec& exec, Package& tree, Byte arg) {
+  Void exit(Exec& exec, Package& tree, Byte arg) {
     Symbol symbol = pd.getSymbol(tree.getData());
 
     if (symbol == cWITH_INPUT ||
         symbol == cWITH_OUTPUT)
     {
+      if (cDEBUG) {
+        if (symbol == cWITH_INPUT) {
+          dbg.print(";; (with-input)");
+        } else {
+          dbg.print(";; (with-output)");
+        }
+      }
+
       // Restore old value
       Datum result = tree.getAux();
       Byte old = pd.getValue(result);
-      exec.set(QExec.cSRC, old);
+      exec.set(Exec.cSRC, old);
     }
   }
 }

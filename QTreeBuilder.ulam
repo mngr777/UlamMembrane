@@ -2,6 +2,8 @@ local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
 local typedef PackageData.Arity Arity;
 
+local constant Bool cDEBUG = true;
+
 quark QTreeBuilder : QStateT(4) {
   constant QBond.Index cSEQUENCE = 0u;
   constant QBond.Index cTREE = 1u;
@@ -57,6 +59,7 @@ quark QTreeBuilder : QStateT(4) {
   Void advance() {
     BondUtils bu;
     BondStatus bs;
+    DebugUtils dbg;
 
     BS.Status status = bu.traverse(0, cSEQUENCE, Package.cNEXT);
     if (bs.isOk(status)) {
@@ -66,6 +69,10 @@ quark QTreeBuilder : QStateT(4) {
       setState(cSTATE_BUILD_DONE);
 
     } else if (status != BS.cINACCESSIBLE) {
+      if (cDEBUG) {
+        dbg.print("QTreeBuilder.advance failed, status:");
+        dbg.print(status);
+      }
       setState(cSTATE_ERROR);
     }
   }
@@ -73,12 +80,20 @@ quark QTreeBuilder : QStateT(4) {
   Void moveUp() {
     BondUtils bu;
     BondStatus bs;
+    DebugUtils dbg;
 
     BS.Status status = bu.traverse(0, cTREE, Package.cUP);
     if (bs.isOk(status)) {
       setState(cSTATE_BUILD);
 
+    } else if (status == BS.cNO_NEXT) {
+      setState(cSTATE_BUILD_DONE);
+
     } else if (status != BS.cINACCESSIBLE) {
+      if (cDEBUG) {
+        dbg.print("QTreeBuilder.moveUp failed, status:");
+        dbg.print(status);
+      }
       setState(cSTATE_ERROR);
     }
   }
@@ -86,12 +101,17 @@ quark QTreeBuilder : QStateT(4) {
   Void moveDown() {
     BondUtils bu;
     BondStatus bs;
+    DebugUtils dbg;
 
     BS.Status status = bu.traverse(0, cTREE, mDownIndex);
     if (bs.isOk(status)) {
       setState(cSTATE_ADVANCE);
 
     } else if (status != BS.cINACCESSIBLE) {
+      if (cDEBUG) {
+        dbg.print("QTreeBuilder.moveUp failed, status:");
+        dbg.print(status);
+      }
       setState(cSTATE_ERROR);
     }
   }

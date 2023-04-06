@@ -1,4 +1,4 @@
-local constant Bool cDEBUG = QExec.cDEBUG;
+local constant Bool cDEBUG = Exec.cDEBUG;
 
 transient EvalConditional : Eval {
   constant Symbol cIF_ZERO     = 0x1;
@@ -13,17 +13,20 @@ transient EvalConditional : Eval {
     return 0;
   }
 
-  Arity eval(QExec& exec, Symbol symbol, Byte arg) {
+  Arity eval(Exec& exec, Symbol symbol, Byte arg) {
     DebugUtils du;
     Bool cond = false;
 
     if (symbol == cIF_ZERO) {
-      cond = (exec.getInteger(QExec.cREG1) == 0);
+      if (cDEBUG) dbg.print("(if-zero)");
+      cond = (exec.getInteger(Exec.cREG1) == 0);
 
     } else if (symbol == cIF_NOT_ZERO) {
-      cond = (exec.getInteger(QExec.cREG1) != 0);
+      if (cDEBUG) dbg.print("(if-not-zero)");
+      cond = (exec.getInteger(Exec.cREG1) != 0);
 
     } else if (symbol == cIF_ATTACHED) {
+      if (cDEBUG) dbg.print("(if-attached)");
       cond = exec.getBond(getBondIndex(exec, cSRC)).isAttached();
     }
 

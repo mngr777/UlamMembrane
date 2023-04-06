@@ -41,10 +41,87 @@ element Demo : QStateT(3) + QBondableT(1) + QMortal {
 }
 
 
+/**
+   \symbol DT
+ */
+element Demo_TreeBuilder : QTreeBuilder + QBondableT(2) + QDiffusableT(100) + QMortal {
+  constant State cSTATE_DETACH_SEQUENCE = cSTATE_BUILD_DONE;
+  constant State cSTATE_MOVE_TO_ROOT    = cSTATE_BUILD_DONE + 1;
+  constant State cSTATE_ATTACH_EXEC     = cSTATE_BUILD_DONE + 2;
+
+  virtual IBondable& getBondable() {
+    return self;
+  }
+
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
+
+  Void step() {
+    if (isState(cSTATE_DETACH_SEQUENCE)) {
+      detachSequence();
+
+    } else if (isState(cSTATE_MOVE_TO_ROOT)) {
+      moveToRoot();
+
+    } else if (isState(cSTATE_ATTACH_EXEC)) {
+      attachExec();
+
+    } else {
+      self.QTreeBuilder.step();
+    }
+  }
+
+  Void detachSequence() {
+    getBond(cSEQUENCE).detach();
+    setState(cSTATE_MOVE_TO_ROOT);
+  }
+
+  Void moveToRoot() {
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(cTREE);
+    Package& tree = (Package&) ew[bond.getSiteNumber()];
+    if (!tree.isRoot())
+      bu.traverse(0, cTREE, Package.cUP);
+  }
+
+  Void attachExec() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& bond = getBond(cTREE);
+    SiteNum treeSite = bond.getSiteNumber();
+    Package& tree = (Package&) ew[treeSite];
+
+    // Build exec
+    Exec exec;
+    SiteNum site = ewm.findEmptySiteAround(treeSite, 1u, bu.maxDist(exec, tree));
+    if (site == SiteNum.maxof)
+      return;
+    ew[site] = exec;
+
+    // Attach to program
+    BS.Status status = bu.attach(site, Exec.cPROGRAM, treeSite, Package.cCOMMON);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+
+    setState(cSTATE_DONE);
+  }
+}
+
+
 local typedef QBondableT(1) QBondable1;
 
 /**
-   \symbol MB
+   \symbol DM
  */
 element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
   typedef C2D.Dir Dir;

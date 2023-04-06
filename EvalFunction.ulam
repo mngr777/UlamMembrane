@@ -41,56 +41,72 @@ transient EvalFunction : Eval {
     return 0;
   }
 
-  Byte eval(QExec& exec, Symbol symbol, Byte arg1, Byte arg2) {
+  Byte eval(Exec& exec, Symbol symbol, Byte arg1, Byte arg2) {
     if (symbol == cSET_1) {
+      if (cDEBUG) dbg.print("(set-1)");
       exec.set(cREG1, arg1);
 
     } else if (symbol == cSET_2) {
+      if (cDEBUG) dbg.print("(set-2)");
       exec.set(cREG2, arg1);
 
     } else if (symbol == cSET_SRC) {
+      if (cDEBUG) dbg.print("(set-src)");
       exec.set(cSRC, arg1);
 
     } else if (symbol == cSET_DST) {
+      if (cDEBUG) dbg.print("(set-dst)");
       exec.set(cDST, arg1);
 
     } else if (symbol == cGET_1) {
+      if (cDEBUG) dbg.print("(get-1)");
       return exec.get(cREG1);
 
     } else if (symbol == cGET_2) {
+      if (cDEBUG) dbg.print("(get-2)");
       return exec.get(cREG2);
 
     } else if (symbol == cGET_SRC) {
+      if (cDEBUG) dbg.print("(get-src)");
       return exec.get(cSRC);
 
     } else if (symbol == cGET_DST) {
+      if (cDEBUG) dbg.print("(get-dst)");
       return exec.get(cDST);
 
 
     } else if (symbol == cATTACH_TO) {
+      if (cDEBUG) dbg.print("(attach-to)");
       return (Byte) attach(exec, toSiteNumber(arg1));
 
     } else if (symbol == cDETACH) {
+      if (cDEBUG) dbg.print("(detach)");
       detach(exec);
 
 
     } else if (symbol == cTRAVERSE) {
+      if (cDEBUG) dbg.print("(traverse)");
       traverse(exec, toBondIndex(arg1));
 
     } else if (symbol == cTRAVERSE_1) {
+      if (cDEBUG) dbg.print("(traverse-1)");
       traverse(exec, 1);
 
     } else if (symbol == cTRAVERSE_2) {
+      if (cDEBUG) dbg.print("(traverse-2)");
       traverse(exec, 2);
 
     } else if (symbol == cTRAVERSE_3) {
+      if (cDEBUG) dbg.print("(traverse-3)");
       traverse(exec, 3);
 
 
     } else if (symbol == cFIND_TYPE) {
+      if (cDEBUG) dbg.print("(find-type)");
       return (Byte) findType(exec, (SType) arg1);
 
     } else if (symbol == cFIND_TYPE_RADIUS) {
+      if (cDEBUG) dbg.print("(find-type-radius)");
       return (Byte) findTypeRadius(exec, (SType) arg1, (Radius) arg2);
     }
 
@@ -98,26 +114,26 @@ transient EvalFunction : Eval {
   }
 
 
-  Bool attach(QExec& exec, SiteNum siteOther) {
+  Bool attach(Exec& exec, SiteNum siteOther) {
     Index index = getBondIndex(exec, cSRC);
     return bs.isOk(bu.attach(0, index, siteOther, 0));
   }
 
-  Void detach(QExec& exec) {
+  Void detach(Exec& exec) {
     Index index = getBondIndex(exec, cSRC);
     bu.detach(0, index);
   }
 
-  Void traverse(QExec& exec, Index indexNext) {
+  Void traverse(Exec& exec, Index indexNext) {
     exec.setInteger(cDST, indexNext);
     exec.setState(ESF.cSTATE_TRAVERSE);
   }
 
-  SiteNum findType(QExec& exec, SType type) {
+  SiteNum findType(Exec& exec, SType type) {
     return findTypeRadius(exec, type, 4u);
   }
 
-  SiteNum findTypeRadius(QExec& exec, SType type, Radius radius) {
+  SiteNum findTypeRadius(Exec& exec, SType type, Radius radius) {
     WindowServices ws;
     ws.reset(1u, radius);
     for (Int s = ws.next(); s >= 0; s = ws.next()) {
