@@ -113,18 +113,19 @@ local typedef QBondableT(1) QBondable1;
 /**
    \symbol DM
  */
-element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
+element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + QMortal {
   typedef C2D.Dir Dir;
 
   constant Unsigned(5) cSIDE_LENGTH = 16;
   constant Unsigned(2) cSTEP_LENGTH = 2;
 
-  constant State cSTATE_MOVE_OUT = 0;
-  constant State cSTATE_BUILD    = 1;
-  constant State cSTATE_ANCHOR   = 2;
-  constant State cSTATE_TRAVERSE = 3;
-  constant State cSTATE_FORWARD  = 4;
-  constant State cSTATE_CLOSE    = 5;
+  constant State cSTATE_MOVE_OUT       = 0;
+  constant State cSTATE_BUILD          = 1;
+  constant State cSTATE_ANCHOR         = 2;
+  constant State cSTATE_TRAVERSE       = 3;
+  constant State cSTATE_FORWARD        = 4;
+  constant State cSTATE_CLOSE          = 5;
+  constant State cSTATE_REMOVE_ANCHORS = 6;
 
   Dir mDir = 0; // South
   Unsigned(5) mCount = 0;
@@ -143,6 +144,9 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
       forward();
     } else if (isState(cSTATE_CLOSE)) {
       close();
+    } else if (isState(cSTATE_REMOVE_ANCHORS)) {
+      removeAnchors();
+      diffuse();
     } else if (isState(cSTATE_DONE)) {
       die();
     }
@@ -218,7 +222,6 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
     }
 
     // Build anchor
-    // TODO: find a way to place anchors that mostly works
     C2D coord = ew.getCoordRaw(getForwardSite());
     coord = cu.rotateLeft(coord);
     SiteNum site = ew.getSiteNumberRaw(-coord);
@@ -288,7 +291,45 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QMortal {
       return;
 
     BS.Status status = bu.attach(prevSite, Membrane.cNEXT, nextSite, Membrane.cPREV);
-    if (bs.isOk(status))
+    if (bs.isOk(status)) {
+      mCount = 0;
+      setState(cSTATE_REMOVE_ANCHORS);
+    }
+  }
+
+  Void removeAnchors() {
+    BondUtils bu;
+    EventWindow ew;
+
+    // Get membrane
+    QBond& bond = getBond(0);
+    SiteNum membraneSite = bond.getSiteNumber();
+    Membrane& membrane = (Membrane&) ew[membraneSite];
+
+    // Get anchor
+    QBond& anchorBond = membrane.getBond(Membrane.cOTHER);
+    Bool isAttached = anchorBond.isAttached();
+    SiteNum anchorSite = isAttached
+      ? anchorBond.getSiteNumber(membraneSite)
+      : SiteNum.maxof;
+
+    if (isAttached && !ew.isAccessible(anchorSite))
+      return;
+
+    if (!isAttached || !(ew[anchorSite] is Anchor)) {
+      // no anchor, move to next membrane atom
+      bu.traverse(0, 0, Membrane.cNEXT);
+      return;
+    }
+
+    // Detach and destroy anchor
+    anchorBond.detach(membraneSite);
+    Empty empty;
+    ew[anchorSite] = empty;
+    mCount++;
+
+    // Are all anchors removed?
+    if (mCount == 4)
       setState(cSTATE_DONE);
   }
 
