@@ -3,13 +3,23 @@ local typedef BondStatus BS;
 transient EvalStatefulFunction : Eval {
   typedef Exec.State State;
 
-  constant State cSTATE_FIRST    = 8;
-  constant State cSTATE_TRAVERSE = cSTATE_FIRST;
-  constant State cSTATE_LAST = cSTATE_TRAVERSE;
+
+  constant State cSTATE_TRAVERSE      = 8;
+  constant State cSTATE_BUILD         = 9;
+  constant State cSTATE_MOVE_TO_OTHER = 10;
+
+  constant State cSTATE_FIRST = cSTATE_TRAVERSE;
+  constant State cSTATE_LAST  = cSTATE_MOVE_TO_OTHER;
 
   Byte eval(Exec& exec, Package& tree, Bool& done) {
     if (exec.isState(cSTATE_TRAVERSE)) {
       done = traverse(exec);
+
+    } else if (exec.isState(cSTATE_BUILD)) {
+      done = build(exec);
+
+    } else if (exec.isState(cSTATE_MOVE_TO_OTHER)) {
+      done = moveToOther(exec);
     }
 
     return 0x0;
@@ -20,5 +30,55 @@ transient EvalStatefulFunction : Eval {
     Index indexNext = getBondIndex(exec, cDST);
     BS.Status status = bu.traverse(0, index, indexNext);
     return (status != BS.cINACCESSIBLE);
+  }
+
+  Bool build(Exec& exec) {
+    SType stype = getSType(exec, cREG1);
+    Index index = getBondIndex(exec, cSRC);
+    Index buildIndex = getBondIndex(exec, cDST);
+
+    if (exec.getBond(index).isAttached())
+      return true; // already have an atom attached
+
+    Atom atom = stu.make(stype);
+    IBondable& bondable = (IBondable&) atom;
+
+    // Build
+    Radius radius = bu.maxDist(bondable, exec);
+    EventWindowMisc ewm;
+    SiteNum buildSite = ewm.findEmptySite(1, radius);
+    if (buildSite == SiteNum.maxof)
+      return false;
+    ew[buildSite] = atom;
+
+    // Attach
+    BS.Status status = bu.attach(0, index, buildSite, buildIndex);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[buildSite] = empty;
+    }
+    return (status != BS.cINACCESSIBLE);
+  }
+
+  Bool moveToOther(Exec& exec) {
+    Index index = getBondIndex(exec, cSRC);
+    Index indexTo = getBondIndex(exec, cDST);
+    Index indexOther = (index == Exec.cOUTPUT) ? Exec.cINPUT : Exec.cOUTPUT;
+
+    QBond& bond = exec.getBond(index);
+    QBond& bondOther = exec.getBond(indexOther);
+    if (!bond.isAttached() || !bondOther.isAttached())
+      return true;
+
+    SiteNum site = bond.getSiteNumber();
+    SiteNum siteOther = bondOther.getSiteNumber();
+    if (!ew.isAccessible(site) || !ew.isAccessible(siteOther))
+      return false;
+
+    BS.Status status = bu.move(site, bond.getIndex(), siteOther, indexTo);
+    if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
+      return false;
+
+    return true;
   }
 }

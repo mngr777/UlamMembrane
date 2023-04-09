@@ -25,15 +25,26 @@ transient Eval {
   BondUtils bu;
   DataUtils du;
   DebugUtils dbg;
+  EventWindow ew;
   PackageData pd;
   STypeUtils stu;
 
+  SType toSType(Byte value) {
+    // TODO; sanity check
+    return (SType) value;
+  }
+
+  SType getSType(Exec& exec, RegIndex regIndex) {
+    return toSType(exec.get(regIndex));
+  }
+
   SiteNum toSiteNumber(Byte value) {
+    // TODO: sanity check
     return (SiteNum) value;
   }
 
   SiteNum getSiteNumber(Exec& exec, RegIndex regIndex) {
-    return (SiteNum) exec.getInteger(regIndex);
+    return toSiteNumber(exec.get(regIndex));
   }
 
   Index toBondIndex(Byte value) {

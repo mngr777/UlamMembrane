@@ -1,9 +1,10 @@
 local constant Bool cDEBUG = Exec.cDEBUG;
 
 transient EvalConditional : Eval {
-  constant Symbol cIF_ZERO     = 0x1;
-  constant Symbol cIF_NOT_ZERO = 0x2;
-  constant Symbol cIF_ATTACHED = 0x9;
+  constant Symbol cIF_ZERO          = 0x1;
+  constant Symbol cIF_NOT_ZERO      = 0x2;
+  constant Symbol cIF_ATTACHED      = 0x9;
+  constant Symbol cIF_ATTACHED_NEXT = 0xa;
 
   Arity getArity(Symbol symbol) {
     return 2;
@@ -28,6 +29,17 @@ transient EvalConditional : Eval {
     } else if (symbol == cIF_ATTACHED) {
       if (cDEBUG) dbg.print("(if-attached)");
       cond = exec.getBond(getBondIndex(exec, cSRC)).isAttached();
+
+    } else if (symbol == cIF_ATTACHED_NEXT) {
+      if (cDEBUG) dbg.print("(if-attached-next)");
+      QBond& bond = exec.getBond(getBondIndex(exec, cSRC));
+      if (bond.isAttached()) {
+        Index nextIndex = getBondIndex(exec, cDST);
+        SiteNum site = bond.getSiteNumber();
+        IBondable& bondable = (IBondable&) ew[site];
+        cond = bondable.getBond(nextIndex).isAttached();
+      }
+
     }
 
     if (getArgNum(symbol) == 1)

@@ -1,6 +1,7 @@
 local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
 local typedef PackageData PD;
+local typedef STypeUtils STU;
 
 element Demo : QStateT(3) + QBondableT(1) + QMortal {
   constant State cPLACE_MEMBRANE_BUILDER = 0;
@@ -375,11 +376,29 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
 
 
 /**
+   Basic crawler:
    (with-input
      (if-attached
        (traverse-3) ; next membrane
        (attach-to
-         3) ; membrane stype
+         3))) ; membrane stype
+
+   Build other layer atoms:
+    1 (with-input
+    2  (if-attached
+    3    (with-dst
+    4      Membrane.cOTHER              ; "other" membrane bond
+    5      (if-attached-next
+    6        (traverse-3)               ; move to next membrane atom
+    7        (with-output
+    8          (prog2
+    9            (build                 ; build new membrane atom
+   10              STU.cMEMBRANE        ; (membrane stype)
+   11              Membrane.cOTHER)     ; "other" bond
+   12            (move-to-other
+   13              Membrane.cOTHER))))) ; attach to input membrane's "other" bond
+   14    (attach-to
+   15      3)))                         ; membrane stype
  */
 transient Demo_SequenceData {
   typedef DataUtils.Datum Datum;
@@ -402,7 +421,7 @@ transient Demo_SequenceData {
 
   constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
-  constant Unsigned cSIZE = 6;
+  constant Unsigned cSIZE = 15;
 
   PackageData pd;
 
@@ -410,12 +429,30 @@ transient Demo_SequenceData {
   EvalConditional ec;
   EvalFunction ef;
 
+  // Item items[cSIZE * 2] = {
+  //   /*  */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x1,
+  //   /*    */ cCOND | EC.cIF_ATTACHED, 0x0,
+  //   /*      */ cFUNC | EF.cTRAVERSE_3, 0x0,
+  //   /*      */ cFUNC | EF.cATTACH_TO, 0x0,
+  //   /*        */ cCNST | (Byte) 3, 0x0
+  // };
+
   Item items[cSIZE * 2] = {
-    /*  */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x1,
-    /*    */ cCOND | EC.cIF_ATTACHED, 0x0,
-    /*      */ cFUNC | EF.cTRAVERSE_3, 0x0,
-    /*      */ cFUNC | EF.cATTACH_TO, 0x0,
-    /*        */ cCNST | (Byte) 3, 0x0
+    /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x1,
+    /*  2   */ cCOND | EC.cIF_ATTACHED, 0,
+    /*  3     */ cBLCK | EB.cWITH_DST, 0,
+    /*  4       */ cCNST | (Byte) Membrane.cOTHER, 0,
+    /*  5       */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
+    /*  6         */ cFUNC | EF.cTRAVERSE_3, 0,
+    /*  7         */ cBLCK | EB.cWITH_OUTPUT, 0,
+    /*  8            */ cFUNC | EF.cPROG2, 0,
+    /*  9              */ cFUNC | EF.cBUILD, 0,
+    /* 10                */ cCNST | (Byte) STU.cMEMBRANE, 0,
+    /* 11                */ cCNST | (Byte) Membrane.cOTHER, 0,
+    /* 12              */ cFUNC | EF.cMOVE_TO_OTHER, 0,
+    /* 13                */ cCNST | (Byte) Membrane.cOTHER, 0,
+    /* 14     */ cFUNC | EF.cATTACH_TO, 0,
+    /* 15       */ cCNST | STU.cMEMBRANE, 0
   };
 
   Datum getData(Unsigned i) {
@@ -458,4 +495,3 @@ transient Demo_SequenceData {
     return arity;
   }
 }
-

@@ -20,6 +20,9 @@ transient EvalFunction : Eval {
   constant Symbol cTRAVERSE_2           = 0x25;
   constant Symbol cTRAVERSE_3           = 0x26;
 
+  constant Symbol cBUILD                = 0x27;
+  constant Symbol cMOVE_TO_OTHER        = 0x28;
+
   Arity getArity(Symbol symbol) {
     return getArgNum(symbol);
   }
@@ -30,12 +33,15 @@ transient EvalFunction : Eval {
         symbol == cSET_SRC ||
         symbol == cSET_DST ||
         symbol == cATTACH_TO ||
-        symbol == cTRAVERSE)
+        symbol == cTRAVERSE ||
+        symbol == cMOVE_TO_OTHER)
     {
       return 1;
     }
 
-    if (symbol == cPROG2) {
+    if (symbol == cPROG2 ||
+        symbol == cBUILD)
+    {
       return 2;
     }
 
@@ -103,6 +109,18 @@ transient EvalFunction : Eval {
     } else if (symbol == cTRAVERSE_3) {
       if (cDEBUG) dbg.print("(traverse-3)");
       traverse(exec, 3);
+
+    } else if (symbol == cBUILD) {
+      if (cDEBUG) dbg.print("(build)");
+      exec.set(cREG1, arg1); // stype
+      exec.set(cDST, arg2);  // new atom bond to attach to
+      exec.setState(ESF.cSTATE_BUILD);
+
+    } else if (symbol == cMOVE_TO_OTHER) {
+      if (cDEBUG) dbg.print("(move-to-other)");
+      // Move output atom to input or vice versa
+      exec.set(cDST, arg1); // other atom bond index
+      exec.setState(ESF.cSTATE_MOVE_TO_OTHER);
 
     } else {
       dbg.print("EvalFunction.eval: Unknown symbol:");

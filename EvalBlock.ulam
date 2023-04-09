@@ -1,12 +1,17 @@
 transient EvalBlock : Eval {
   constant Symbol cWITH_INPUT  = 0x1;
   constant Symbol cWITH_OUTPUT = 0x2;
+  constant Symbol cWITH_DST    = 0x3;
 
   Arity getArity(Symbol symbol) {
+    if (symbol == cWITH_DST)
+      return 2;
     return 1;
   }
 
   Arity getArgNum(Symbol symbol) {
+    if (symbol == cWITH_DST)
+      return 1;
     return 0;
   }
 
@@ -16,21 +21,14 @@ transient EvalBlock : Eval {
     if (symbol == cWITH_INPUT ||
         symbol == cWITH_OUTPUT)
     {
-      QBond.Index index;
-      if (symbol == cWITH_INPUT) {
-        if (cDEBUG) dbg.print("(with-output)");
-        index = Exec.cINPUT;
-      } else {
-        if (cDEBUG) dbg.print("(with-input)");
-        index = Exec.cOUTPUT;
-      }
+      if (cDEBUG)
+        dbg.print((symbol == cWITH_INPUT) ? ";; (with-input)" : ";; (with-output)");
+      QBond.Index index = (symbol == cWITH_INPUT) ? Exec.cINPUT : Exec.cOUTPUT;
+      replace(exec, cSRC, tree, (Byte) index);
 
-      Byte old = exec.get(Exec.cSRC);
-      exec.set(Exec.cSRC, (Byte) index);
-
-      // Store old value in tree node
-      Datum result = tree.getAux();
-      result = pd.setValue(result, old);
+    } else if (symbol == cWITH_DST) {
+      if (cDEBUG) dbg.print("(with-dst)");
+      replace(exec, cDST, tree, arg);
     }
   }
 
@@ -40,18 +38,30 @@ transient EvalBlock : Eval {
     if (symbol == cWITH_INPUT ||
         symbol == cWITH_OUTPUT)
     {
-      if (cDEBUG) {
-        if (symbol == cWITH_INPUT) {
-          dbg.print(";; (with-input)");
-        } else {
-          dbg.print(";; (with-output)");
-        }
-      }
+      if (cDEBUG)
+        dbg.print((symbol == cWITH_INPUT) ? ";; (with-input)" : ";; (with-output)");
+      restore(exec, cSRC, tree);
 
-      // Restore old value
-      Datum result = tree.getAux();
-      Byte old = pd.getValue(result);
-      exec.set(Exec.cSRC, old);
+    } else if (symbol == cWITH_DST) {
+      if (cDEBUG) dbg.print(";; (with-dst)");
+      restore(exec, cDST, tree);
     }
+  }
+
+  Void replace(Exec& exec, RegIndex regIndex, Package& tree, Byte value) {
+    // Store old value
+    Byte old = exec.get(regIndex);
+    Datum result = tree.getAux();
+    result = pd.setValue(result, old);
+    tree.setAux(result);
+
+    // Replace
+    exec.set(regIndex, value);
+  }
+
+  Void restore(Exec& exec, RegIndex regIndex, Package& tree) {
+    Datum result = tree.getAux();
+    Byte old = pd.getValue(result);
+    exec.set(regIndex, old);
   }
 }
