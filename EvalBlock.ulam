@@ -3,6 +3,8 @@ transient EvalBlock : Eval {
   constant Symbol cWITH_OUTPUT = 0x2;
   constant Symbol cWITH_DST    = 0x3;
 
+  constant Bool cDEBUG_VALUE = false;
+
   Arity getArity(Symbol symbol) {
     if (symbol == cWITH_DST)
       return 2;
@@ -22,7 +24,7 @@ transient EvalBlock : Eval {
         symbol == cWITH_OUTPUT)
     {
       if (cDEBUG)
-        dbg.print((symbol == cWITH_INPUT) ? ";; (with-input)" : ";; (with-output)");
+        dbg.print((symbol == cWITH_INPUT) ? "(with-input)" : "(with-output)");
       QBond.Index index = (symbol == cWITH_INPUT) ? Exec.cINPUT : Exec.cOUTPUT;
       replace(exec, cSRC, tree, (Byte) index);
 
@@ -57,11 +59,26 @@ transient EvalBlock : Eval {
 
     // Replace
     exec.set(regIndex, value);
+
+    if (cDEBUG_VALUE) {
+      dbg.print("Registry value replaced (reg/from/to):");
+      dbg.print(ed.getRegName(regIndex));
+      dbg.print(du.toInteger(old));
+      dbg.print(du.toInteger(value));
+    }
   }
 
   Void restore(Exec& exec, RegIndex regIndex, Package& tree) {
     Datum result = tree.getAux();
     Byte old = pd.getValue(result);
+    Byte value = exec.get(regIndex);
     exec.set(regIndex, old);
+
+    if (cDEBUG_VALUE) {
+      dbg.print("Registry value restored (reg/from/to):");
+      dbg.print(ed.getRegName(regIndex));
+      dbg.print(du.toInteger(value));
+      dbg.print(du.toInteger(old));
+    }
   }
 }

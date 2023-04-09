@@ -26,6 +26,7 @@ transient Eval {
   DataUtils du;
   DebugUtils dbg;
   EventWindow ew;
+  ExecDebug ed;
   PackageData pd;
   STypeUtils stu;
 

@@ -123,7 +123,7 @@ transient EvalFunction : Eval {
       exec.setState(ESF.cSTATE_MOVE_TO_OTHER);
 
     } else {
-      dbg.print("EvalFunction.eval: Unknown symbol:");
+      dbg.print("EvalFunction.eval: unknown symbol:");
       dbg.print((Unsigned) symbol);
     }
 

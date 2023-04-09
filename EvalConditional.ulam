@@ -6,6 +6,8 @@ transient EvalConditional : Eval {
   constant Symbol cIF_ATTACHED      = 0x9;
   constant Symbol cIF_ATTACHED_NEXT = 0xa;
 
+  constant Bool cDEBUG_COND = true;
+
   Arity getArity(Symbol symbol) {
     return 2;
   }
@@ -39,8 +41,12 @@ transient EvalConditional : Eval {
         IBondable& bondable = (IBondable&) ew[site];
         cond = bondable.getBond(nextIndex).isAttached();
       }
-
+    } else {
+      dbg.print("EvalConditional.eval: unknown symbol");
+      dbg.print((Unsigned) symbol);
     }
+
+    if (cDEBUG_COND) dbg.print(cond ? "  yes" : "  no");
 
     if (getArgNum(symbol) == 1)
       return cond ? 1u : Arity.maxof;
