@@ -1,0 +1,55 @@
+local typedef EvalConditional EC;
+local typedef PackageData PD;
+
+transient EvalStatefulConditional : Eval {
+  typedef Exec.State State;
+
+  constant State cSTATE_IF_ATTACHED_NEXT_2 = 17;
+
+  constant State cSTATE_FIRST = cSTATE_IF_ATTACHED_NEXT_2;
+  constant State cSTATE_LAST  = cSTATE_IF_ATTACHED_NEXT_2;
+
+  Arity eval(Exec& exec, Package& tree, Bool& done) {
+    Bool cond = false;
+    Symbol symbol = PD.cNIL;
+
+    if (exec.isState(cSTATE_IF_ATTACHED_NEXT_2)) {
+      cond = isAttachedNext2(exec, done);
+      symbol = EC.cIF_ATTACHED_NEXT_2;
+    }
+
+    EvalConditional ec;
+    if (ec.getArgNum(symbol) == 1)
+      return cond ? 1u : Arity.maxof;
+    return cond ? 0u : 1u;
+  }
+
+  Bool isAttachedNext2(Exec& exec, Bool& done) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec, cDST);
+    Index nextIndex2 = getBondIndex(exec, cREG1);
+    done = false;
+
+    // Get attached atom (bondable)
+    QBond& bond = exec.getBond(index);
+    if (!bond.isAttached()) {
+      done = true;
+      return false;
+    }
+    SiteNum site = bond.getSiteNumber();
+    IBondable& bondable = (IBondable&) ew[site];
+
+    // Get next atom
+    QBond& nextBond = bondable.getBond(nextIndex);
+    if (!nextBond.isAttached()) {
+      done = true;
+      return false;
+    }
+    SiteNum nextSite = nextBond.getSiteNumber(site);
+    if (!ew.isAccessible(nextSite))
+      return false;
+    IBondable& next = (IBondable&) ew[nextSite];
+
+    return next.getBond(nextIndex2).isAttached();
+  }
+}
