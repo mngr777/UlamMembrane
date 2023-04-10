@@ -1,4 +1,5 @@
 local typedef EvalStatefulFunction ESF;
+local typedef BondUtils BU;
 
 transient EvalFunction : Eval {
   constant Symbol cSET_1                = 0x01;
@@ -10,39 +11,46 @@ transient EvalFunction : Eval {
   constant Symbol cGET_SRC              = 0x07;
   constant Symbol cGET_DST              = 0x08;
 
-  constant Symbol cPROG2                = 0x11;
+  constant Symbol cNOOP                 = 0x11;
+  constant Symbol cPROG2                = 0x12;
+
+  constant Symbol cSWAP_INPUT_OUTPUT    = 0x13;
 
   constant Symbol cATTACH_TO            = 0x21;
   constant Symbol cDETACH               = 0x22;
+  constant Symbol cDETACH_OTHER         = 0x23;
 
-  constant Symbol cTRAVERSE             = 0x23;
-  constant Symbol cTRAVERSE_1           = 0x24;
-  constant Symbol cTRAVERSE_2           = 0x25;
-  constant Symbol cTRAVERSE_3           = 0x26;
+  constant Symbol cATTACH_OTHER_TO_NEXT = 0x24;
+  constant Symbol cCONNECT_OTHER_FORCE  = 0x25;
 
-  constant Symbol cBUILD                = 0x27;
-  constant Symbol cMOVE_TO_OTHER        = 0x28;
+  constant Symbol cTRAVERSE             = 0x26;
+  constant Symbol cTRAVERSE_1           = 0x27;
+  constant Symbol cTRAVERSE_2           = 0x28;
+  constant Symbol cTRAVERSE_3           = 0x29;
+
+  constant Symbol cBUILD                = 0x2a;
+  constant Symbol cMOVE_TO_OTHER        = 0x2b;
 
   Arity getArity(Symbol symbol) {
     return getArgNum(symbol);
   }
 
   Arity getArgNum(Symbol symbol) {
+    if (symbol == cPROG2 ||
+        symbol == cBUILD)
+    {
+      return 2;
+    }
+
     if (symbol == cSET_1 ||
         symbol == cSET_2 ||
         symbol == cSET_SRC ||
         symbol == cSET_DST ||
         symbol == cATTACH_TO ||
-        symbol == cTRAVERSE ||
+        symbol == cCONNECT_OTHER_FORCE ||
         symbol == cMOVE_TO_OTHER)
     {
       return 1;
-    }
-
-    if (symbol == cPROG2 ||
-        symbol == cBUILD)
-    {
-      return 2;
     }
 
     return 0;
@@ -81,9 +89,16 @@ transient EvalFunction : Eval {
       if (cDEBUG) dbg.print("(get-dst)");
       return exec.get(cDST);
 
+    } else if (symbol == cNOOP) {
+      if (cDEBUG) dbg.print("(noop)");
+      // do nothing
+
     } else if (symbol == cPROG2) {
       // no debug output
       return arg2;
+
+    } else if (symbol == cSWAP_INPUT_OUTPUT) {
+      return bs.isOk(bu.swap(0, Exec.cINPUT, Exec.cOUTPUT));
 
     } else if (symbol == cATTACH_TO) {
       if (cDEBUG) dbg.print("(attach-to)");
@@ -91,12 +106,24 @@ transient EvalFunction : Eval {
 
     } else if (symbol == cDETACH) {
       if (cDEBUG) dbg.print("(detach)");
-      detach(exec);
+      return (Byte) detach(exec);
 
+    } else if (symbol == cDETACH_OTHER) {
+      if (cDEBUG) dbg.print("(detach-other)");
+      return (Byte) detachOther(exec);
+
+    } else if (symbol == cATTACH_OTHER_TO_NEXT) {
+      if (cDEBUG) dbg.print("(attach-other-to-next)");
+      exec.setState(ESF.cSTATE_ATTACH_OTHER_TO_NEXT);
+
+    } else if (symbol == cCONNECT_OTHER_FORCE) {
+      if (cDEBUG) dbg.print("(connect-other-force)");
+      exec.set(cREG1, arg1); // "other" (input/output, other than cSRC) bond index to attach
+      exec.setState(ESF.cSTATE_CONNECT_OTHER_FORCE);
 
     } else if (symbol == cTRAVERSE) {
       if (cDEBUG) dbg.print("(traverse)");
-      traverse(exec, toBondIndex(arg1));
+      traverse(exec, getBondIndex(exec, cDST));
 
     } else if (symbol == cTRAVERSE_1) {
       if (cDEBUG) dbg.print("(traverse-1)");
@@ -135,12 +162,19 @@ transient EvalFunction : Eval {
     if (siteOther == 0u)
       return false;
     Index index = getBondIndex(exec, cSRC);
-    return bs.isOk(bu.attach(0, index, siteOther, 0));
+    bu.detach(0, index);
+    return bs.isOk(bu.attach(0, index, siteOther, BU.cCOMMON));
   }
 
-  Void detach(Exec& exec) {
+  Bool detach(Exec& exec) {
     Index index = getBondIndex(exec, cSRC);
-    bu.detach(0, index);
+    return bs.isOk(bu.detach(0, index));
+  }
+
+  Bool detachOther(Exec& exec) {
+    Index index = getBondIndex(exec, cSRC);
+    Index otherIndex = (index == Exec.cINPUT) ? Exec.cOUTPUT : Exec.cINPUT;
+    return bs.isOk(bu.detach(0, otherIndex));
   }
 
   Void traverse(Exec& exec, Index indexNext) {

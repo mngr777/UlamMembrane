@@ -1,7 +1,9 @@
 transient EvalBlock : Eval {
   constant Symbol cWITH_INPUT  = 0x1;
   constant Symbol cWITH_OUTPUT = 0x2;
-  constant Symbol cWITH_DST    = 0x3;
+  constant Symbol cWITH_REG1   = 0x3;
+  constant Symbol cWITH_REG2   = 0x4;
+  constant Symbol cWITH_DST    = 0x5;
 
   constant Bool cDEBUG_VALUE = false;
 
@@ -28,6 +30,14 @@ transient EvalBlock : Eval {
       QBond.Index index = (symbol == cWITH_INPUT) ? Exec.cINPUT : Exec.cOUTPUT;
       replace(exec, cSRC, tree, (Byte) index);
 
+    } else if (symbol == cWITH_REG1) {
+      if (cDEBUG) dbg.print("(with-reg-1)");
+      replace(exec, cREG1, tree, arg);
+
+    } else if (symbol == cWITH_REG2) {
+      if (cDEBUG) dbg.print("(with-reg-2)");
+      replace(exec, cREG2, tree, arg);
+
     } else if (symbol == cWITH_DST) {
       if (cDEBUG) dbg.print("(with-dst)");
       replace(exec, cDST, tree, arg);
@@ -43,6 +53,14 @@ transient EvalBlock : Eval {
       if (cDEBUG)
         dbg.print((symbol == cWITH_INPUT) ? ";; (with-input)" : ";; (with-output)");
       restore(exec, cSRC, tree);
+
+    } else if (symbol == cWITH_REG1) {
+      if (cDEBUG) dbg.print(";; (with-reg-1)");
+      restore(exec, cREG1, tree);
+
+    } else if (symbol == cWITH_REG2) {
+      if (cDEBUG) dbg.print(";; (with-reg-2)");
+      restore(exec, cREG2, tree);
 
     } else if (symbol == cWITH_DST) {
       if (cDEBUG) dbg.print(";; (with-dst)");

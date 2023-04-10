@@ -1,18 +1,26 @@
 local typedef BondStatus BS;
+local typedef BondUtils BU;
 
 transient EvalStatefulFunction : Eval {
   typedef Exec.State State;
 
+  constant State cSTATE_ATTACH_OTHER_TO_NEXT = 33;
+  constant State cSTATE_CONNECT_OTHER_FORCE  = 34;
+  constant State cSTATE_TRAVERSE             = 35;
+  constant State cSTATE_BUILD                = 36;
+  constant State cSTATE_MOVE_TO_OTHER        = 37;
 
-  constant State cSTATE_TRAVERSE      = 8;
-  constant State cSTATE_BUILD         = 9;
-  constant State cSTATE_MOVE_TO_OTHER = 10;
-
-  constant State cSTATE_FIRST = cSTATE_TRAVERSE;
+  constant State cSTATE_FIRST = cSTATE_ATTACH_OTHER_TO_NEXT;
   constant State cSTATE_LAST  = cSTATE_MOVE_TO_OTHER;
 
   Byte eval(Exec& exec, Package& tree, Bool& done) {
-    if (exec.isState(cSTATE_TRAVERSE)) {
+    if (exec.isState(cSTATE_ATTACH_OTHER_TO_NEXT)) {
+      return attachOtherToNext(exec, done);
+
+    } else if (exec.isState(cSTATE_CONNECT_OTHER_FORCE)) {
+      return connectOtherForce(exec, done);
+
+    } else if (exec.isState(cSTATE_TRAVERSE)) {
       done = traverse(exec);
 
     } else if (exec.isState(cSTATE_BUILD)) {
@@ -25,6 +33,60 @@ transient EvalStatefulFunction : Eval {
     return 0x0;
   }
 
+  Bool attachOtherToNext(Exec& exec, Bool& done) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec,  cDST);
+    Index otherIndex = (index == Exec.cINPUT) ? Exec.cOUTPUT : Exec.cINPUT;
+    done = false;
+
+    QBond& bond = exec.getBond(index);
+    if (!bond.isAttached()) {
+      // Nothing to attach to
+      done = true;
+      return false;
+    }
+
+    SiteNum site = bond.getSiteNumber();
+    IBondable& bondable = (IBondable&) ew[site];
+    QBond& nextBond = bondable.getBond(nextIndex);
+    if (!nextBond.isAttached()) {
+      // Still nothing to attach to
+      done = true;
+      return false;
+    }
+
+    SiteNum nextSite = nextBond.getSiteNumber(site);
+    if (!ew.isAccessible(nextSite))
+      return false;
+
+    IBondable& next = (IBondable&) ew[nextSite];
+    BS.Status status = bu.attach(0, otherIndex, nextSite, BU.cCOMMON);
+    done = (status != BS.cINACCESSIBLE && status != BS.cDISTANCE_EXCEEDS_MAX);
+    return bs.isOk(status);
+  }
+
+  Bool connectOtherForce(Exec& exec, Bool& done) {
+    Index index = getBondIndex(exec, cSRC);
+    Index connectIndex = getBondIndex(exec, cDST);
+    Index otherIndex = (index == Exec.cINPUT) ? Exec.cOUTPUT : Exec.cINPUT;
+    Index connectOtherIndex = getBondIndex(exec, cREG1);
+    done = false;
+
+    QBond& bond = exec.getBond(index);
+    QBond& otherBond = exec.getBond(otherIndex);
+    if (!bond.isAttached() || !otherBond.isAttached()) {
+      done = true; // one or both atoms are missing
+      return false;
+    }
+
+    SiteNum site = bond.getSiteNumber();
+    SiteNum otherSite = otherBond.getSiteNumber();
+    BS.Status status = bu.attachForce(site, connectIndex, otherSite, connectOtherIndex);
+    done = (status != BS.cDISTANCE_EXCEEDS_MAX);
+    return bs.isOk(status);
+  }
+
+  // TODO: return and set done value
   Bool traverse(Exec& exec) {
     Index index = getBondIndex(exec, cSRC);
     Index indexNext = getBondIndex(exec, cDST);
@@ -32,6 +94,7 @@ transient EvalStatefulFunction : Eval {
     return (status != BS.cINACCESSIBLE);
   }
 
+  // TODO: return and set done value
   Bool build(Exec& exec) {
     SType stype = getSType(exec, cREG1);
     Index index = getBondIndex(exec, cSRC);
@@ -60,6 +123,7 @@ transient EvalStatefulFunction : Eval {
     return (status != BS.cINACCESSIBLE);
   }
 
+  // TODO: return and set done value
   Bool moveToOther(Exec& exec) {
     Index index = getBondIndex(exec, cSRC);
     Index indexTo = getBondIndex(exec, cDST);

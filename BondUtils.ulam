@@ -5,6 +5,8 @@ transient BondUtils + Fail {
   typedef BondStatus.Status Status;
   typedef QBond.Index Index;
 
+  constant QBond.Index cCOMMON = 0;
+
   BondStatus bs;
   EventWindow ew;
 
@@ -23,6 +25,50 @@ transient BondUtils + Fail {
   Status attach(SiteNum site, Index index, SiteNum siteOther, Index indexOther) {
     IBondable& bondable1 = (IBondable&) ew[site];
     return bondable1.getBond(index).attach(site, index, siteOther, indexOther);
+  }
+
+
+  Status attachForce(SiteNum site1, Index index1, SiteNum site2, Index index2) {
+    IBondable& bondable1 = (IBondable&) ew[site1];
+    IBondable& bondable2 = (IBondable&) ew[site2];
+
+    QBond& bond1 = bondable1.getBond(index1);
+    QBond& bond2 = bondable2.getBond(index2);
+    Bool isAttached1 = bond1.isAttached();
+    Bool isAttached2 = bond2.isAttached();
+
+    if (!isAttached1 && !isAttached2)
+      return attach(site1, index1, site2, index2);
+
+    SiteNum siteOther1 = bond1.getSiteNumber(site1);
+    Index indexOther1 = bond1.getIndex();
+    if (isAttached1 && !ew.isAccessible(siteOther1))
+      return BS.cINACCESSIBLE;
+
+    SiteNum siteOther2 = bond2.getSiteNumber(site2);
+    Index indexOther2 = bond2.getIndex();
+    if (isAttached2 && !ew.isAccessible(siteOther2))
+      return BS.cINACCESSIBLE;
+
+    // Detach
+    BS.Status status = bond1.detach(site1);
+    if (bs.isOk(status))
+      status = bond2.detach(site2);
+
+    // Attach
+    if (bs.isOk(status))
+      status = bond1.attach(site1, index1, site2, index2);
+
+    if (!bs.isOk(status)) {
+      // Try and restore the bonds
+      bond1.detach(site1);
+      bond2.detach(site2);
+      if (isAttached1 && !bs.isOk(bond1.attach(site1, index1, siteOther1, indexOther1)))
+        fail("BondUtils.attachForce: failed to re-attach 1st bond");
+      if (isAttached2 && !bs.isOk(bond2.attach(site2, index2, siteOther2, indexOther2)))
+        fail("BondUtils.attachForce: failed to re-attach 2nd bond");
+    }
+    return status;
   }
 
 
@@ -53,9 +99,6 @@ transient BondUtils + Fail {
   }
 
   Status traverse(SiteNum site, Index index, Index indexNext, QBond.Num indexBond) {
-    if (!ew.isAccessible(site))
-      return BS.cINACCESSIBLE;
-
     // Object
     IBondable& obj = (IBondable&) ew[site];
     QBond& bondCurrent = obj.getBond(index);
@@ -103,9 +146,6 @@ transient BondUtils + Fail {
   }
 
   Status replace(SiteNum site, Index index, SiteNum subSite, Index subIndex) {
-    if (!ew.isAccessible(site) || !ew.isAccessible(subSite))
-      return BS.cINACCESSIBLE;
-
     // Object whose attachment we're replacing
     IBondable& obj = (IBondable&) ew[site];
     QBond& objBond = obj.getBond(index);
@@ -153,9 +193,6 @@ transient BondUtils + Fail {
 
 
   Status move(SiteNum site, Index index, SiteNum siteTo, Index indexTo) {
-    if (!ew.isAccessible(site) || !ew.isAccessible(siteTo))
-      return BS.cINACCESSIBLE;
-
     // Object to move
     IBondable& obj = (IBondable&) ew[site];
     QBond& objBond = obj.getBond(index);
@@ -190,6 +227,60 @@ transient BondUtils + Fail {
         if (!bs.isOk(objBond.attach(site, index, currentSite, currentIndex)))
           fail("BondUtils.move: failed to re-attach"); // shouldn't happen
       }
+    }
+    return status;
+  }
+
+
+  Status swap(C2D coord, Index index1, Index index2) {
+    SiteNum site = ew.getSiteNumberRaw(coord);
+    return swap(site, index1, index2);
+  }
+
+  Status swap(SiteNum site, Index index1, Index index2) {
+    if (index1 == index2)
+      return BS.cOK;
+
+    IBondable& obj = (IBondable&) ew[site];
+
+    QBond& bond1 = obj.getBond(index1);
+    QBond& bond2 = obj.getBond(index2);
+    Bool isAttached1 = bond1.isAttached();
+    Bool isAttached2 = bond2.isAttached();
+
+    // Check if both bonds are not attached
+    if (!isAttached1 && !isAttached2)
+      return BS.cOK;
+
+    SiteNum siteOther1 = bond1.getSiteNumber(site);
+    Index indexOther1 = bond1.getIndex();
+    if (isAttached1 && !ew.isAccessible(siteOther1))
+      return BS.cINACCESSIBLE;
+
+    SiteNum siteOther2 = bond2.getSiteNumber(site);
+    Index indexOther2 = bond2.getIndex();
+    if (isAttached2 && !ew.isAccessible(siteOther2))
+      return BS.cINACCESSIBLE;
+
+    // Detach
+    BS.Status status = bond1.detach(site);
+    if (bs.isOk(status))
+      status = bond2.detach(site);
+
+    // Attach
+    if (bs.isOk(status) && isAttached2)
+      status = bond1.attach(site, index1, siteOther2, indexOther2);
+    if (bs.isOk(status) && isAttached1)
+      status = bond2.attach(site, index2, siteOther1, indexOther1);
+
+    if (!bs.isOk(status)) {
+      // Try and restore the bonds
+      bond1.detach(site);
+      bond2.detach(site);
+      if (isAttached1 && !bs.isOk(bond1.attach(site, index1, siteOther1, indexOther1)))
+        fail("BondUtils.swap: failed to re-attach 1st bond");
+      if (isAttached2 && !bs.isOk(bond2.attach(site, index2, siteOther2, indexOther2)))
+        fail("BondUtils.swap: failed to re-attach 2nd bond");
     }
     return status;
   }

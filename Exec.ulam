@@ -1,4 +1,5 @@
 local typedef BondStatus BS;
+local typedef EvalStatefulConditional ESC;
 local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
@@ -73,7 +74,10 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
     } else if (isState(cSTATE_DONE)) {
       reset();
 
-    } else if (ESF.cSTATE_FIRST <= getState() && getState() <= ESF.cSTATE_LAST) {
+    } else if ((ESC.cSTATE_FIRST <= getState() && getState() <= ESC.cSTATE_LAST)) {
+      execStateful();
+
+    } else if ((ESF.cSTATE_FIRST <= getState() && getState() <= ESF.cSTATE_LAST)) {
       execStateful();
     }
   }
@@ -138,12 +142,26 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
       return;
 
     Package& tree = (Package&) ew[bond.getSiteNumber()];
+    Type type = pd.getType(tree.getData());
+
     Bool done = false;
-    Byte value = esf.eval(self, tree, done);
+    Byte value = PD.cNIL;
+    Bool isFinal = true;
+
+    if (type == PD.cTYPE_CONDITIONAL) {
+      EvalStatefulConditional esc;
+      value = (Byte) esc.eval(self, tree, done);
+      isFinal = false;
+
+    } else if (type == PD.cTYPE_FUNCTION) {
+      EvalStatefulFunction esf;
+      value = esf.eval(self, tree, done);
+    }
+
     if (done) {
-      // Set final value
+      // Set value
       Datum result = tree.getAux();
-      result = pd.setIsFinal(result, true);
+      result = pd.setIsFinal(result, isFinal);
       result = pd.setValue(result, value);
       tree.setAux(result);
 
@@ -339,11 +357,13 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
     Symbol symbol = pd.getSymbol(tree.getData());
     Arity branch = ec.eval(self, symbol, arg1);
 
-    // Store selected branch as argument/non-final value
-    Datum result = tree.getAux();
-    result = pd.setIsFinal(result, false);
-    result = pd.setValue(result, branch);
-    tree.setAux(result);
+    if (isState(cSTATE_EXEC)) {
+      // Store selected branch as argument/non-final value
+      Datum result = tree.getAux();
+      result = pd.setIsFinal(result, false);
+      result = pd.setValue(result, branch);
+      tree.setAux(result);
+    }
   }
 
   Void evalFunction(Package& tree, Byte arg1, Byte arg2) {
@@ -353,11 +373,13 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
     Symbol symbol = pd.getSymbol(tree.getData());
     Byte value = ef.eval(self, symbol, arg1, arg2);
 
-    // Store result value as final
-    Datum result = tree.getAux();
-    result = pd.setIsFinal(result, true);
-    result = pd.setValue(result, value);
-    tree.setAux(result);
+    if (isState(cSTATE_EXEC)) {
+      // Store result value as final
+      Datum result = tree.getAux();
+      result = pd.setIsFinal(result, true);
+      result = pd.setValue(result, value);
+      tree.setAux(result);
+    }
   }
 
   Arity getArgNum(Package& tree) {

@@ -6,7 +6,7 @@ local typedef QBondableT(4) QBondable4;
 element Package : QBondable4 + ITaggable + QDiffusableT(100) {
   typedef DataUtils.Datum Datum;
 
-  constant QBond.Index cCOMMON = 0;
+  constant QBond.Index cCOMMON = 0; // BU.cCOMMON
 
   // Sequence (non-executable)
   constant QBond.Index cPREV   = 1;

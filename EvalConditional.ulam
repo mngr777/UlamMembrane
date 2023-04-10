@@ -1,10 +1,15 @@
+local typedef EvalStatefulConditional ESC;
+
 local constant Bool cDEBUG = Exec.cDEBUG;
 
 transient EvalConditional : Eval {
-  constant Symbol cIF_ZERO          = 0x1;
-  constant Symbol cIF_NOT_ZERO      = 0x2;
-  constant Symbol cIF_ATTACHED      = 0x9;
-  constant Symbol cIF_ATTACHED_NEXT = 0xa;
+  constant Symbol cIF                    = 0x1;
+  constant Symbol cIF_ZERO               = 0x2;
+  constant Symbol cIF_NOT_ZERO           = 0x3;
+  constant Symbol cIF_ATTACHED           = 0x9;
+  constant Symbol cIF_ATTACHED_NEXT      = 0xa;
+  constant Symbol cIF_ATTACHED_NEXT_2    = 0xb;
+  constant Symbol cIF_OTHER_MATCHES_NEXT = 0x11;
 
   constant Bool cDEBUG_COND = true;
 
@@ -13,6 +18,8 @@ transient EvalConditional : Eval {
   }
 
   Arity getArgNum(Symbol symbol) {
+    if (symbol == cIF)
+      return 1;
     return 0;
   }
 
@@ -20,7 +27,11 @@ transient EvalConditional : Eval {
     DebugUtils du;
     Bool cond = false;
 
-    if (symbol == cIF_ZERO) {
+    if (symbol == cIF) {
+      if (cDEBUG) dbg.print("(if)");
+      cond = (arg != 0x0);
+
+    } else if (symbol == cIF_ZERO) {
       if (cDEBUG) dbg.print("(if-zero)");
       cond = (exec.getInteger(Exec.cREG1) == 0);
 
@@ -34,13 +45,16 @@ transient EvalConditional : Eval {
 
     } else if (symbol == cIF_ATTACHED_NEXT) {
       if (cDEBUG) dbg.print("(if-attached-next)");
-      QBond& bond = exec.getBond(getBondIndex(exec, cSRC));
-      if (bond.isAttached()) {
-        Index nextIndex = getBondIndex(exec, cDST);
-        SiteNum site = bond.getSiteNumber();
-        IBondable& bondable = (IBondable&) ew[site];
-        cond = bondable.getBond(nextIndex).isAttached();
-      }
+      cond = isAttachedNext(exec);
+
+    } else if (symbol == cIF_ATTACHED_NEXT_2) {
+      if (cDEBUG) dbg.print("(if-attached-next-2)");
+      exec.setState(ESC.cSTATE_IF_ATTACHED_NEXT_2);
+
+    } else if (symbol == cIF_OTHER_MATCHES_NEXT) {
+      if (cDEBUG) dbg.print("(if-other-matches-next)");
+      cond = isOtherMatchingNext(exec);
+
     } else {
       dbg.print("EvalConditional.eval: unknown symbol");
       dbg.print((Unsigned) symbol);
@@ -51,5 +65,36 @@ transient EvalConditional : Eval {
     if (getArgNum(symbol) == 1)
       return cond ? 1u : Arity.maxof;
     return cond ? 0u : 1u;
+  }
+
+  Bool isAttachedNext(Exec& exec) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec, cDST);
+
+    QBond& bond = exec.getBond(index);
+    if (!bond.isAttached())
+      return false;
+
+    IBondable& bondable = (IBondable&) ew[bond.getSiteNumber()];
+    return bondable.getBond(nextIndex).isAttached();
+  }
+
+  Bool isOtherMatchingNext(Exec& exec) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec, cDST);
+    Index otherIndex = (index == Exec.cINPUT) ? Exec.cOUTPUT : Exec.cINPUT;
+
+    QBond& bond = exec.getBond(index);
+    QBond& otherBond = exec.getBond(otherIndex);
+    if (!bond.isAttached() || !otherBond.isAttached())
+      return false;
+
+    SiteNum site = bond.getSiteNumber();
+    IBondable& bondable = (IBondable&) ew[site];
+    QBond& nextBond = bondable.getBond(nextIndex);
+    if (!nextBond.isAttached())
+      return false;
+
+    return (otherBond.getSiteNumber() == nextBond.getSiteNumber(site));
   }
 }

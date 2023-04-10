@@ -6,7 +6,7 @@ element Membrane : QBondableT(4) + QDiffusableT(100, 2) + QAttractionT(Attractio
   constant Bits cCOLOR_DEFAULT = 0x000054d2;
   constant Bits cCOLOR_DEFECT  = 0x005428c8;
 
-  constant QBond.Index cCOMMON = 0;
+  constant QBond.Index cCOMMON = 0; // BU.cCOMMON
   constant QBond.Index cPREV   = 1;
   constant QBond.Index cOTHER  = 2;
   constant QBond.Index cNEXT   = 3;
