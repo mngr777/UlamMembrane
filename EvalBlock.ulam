@@ -4,6 +4,9 @@ transient EvalBlock : Eval {
   constant Symbol cWITH_REG1   = 0x3;
   constant Symbol cWITH_REG2   = 0x4;
   constant Symbol cWITH_DST    = 0x5;
+  constant Symbol cWITH_DST_1  = 0x6;
+  constant Symbol cWITH_DST_2  = 0x7;
+  constant Symbol cWITH_DST_3  = 0x8;
 
   constant Bool cDEBUG_VALUE = false;
 
@@ -31,16 +34,28 @@ transient EvalBlock : Eval {
       replace(exec, cSRC, tree, (Byte) index);
 
     } else if (symbol == cWITH_REG1) {
-      if (cDEBUG) dbg.print("(with-reg-1)");
+      if (cDEBUG) dbg.print("(with-reg1)");
       replace(exec, cREG1, tree, arg);
 
     } else if (symbol == cWITH_REG2) {
-      if (cDEBUG) dbg.print("(with-reg-2)");
+      if (cDEBUG) dbg.print("(with-reg2)");
       replace(exec, cREG2, tree, arg);
 
     } else if (symbol == cWITH_DST) {
       if (cDEBUG) dbg.print("(with-dst)");
       replace(exec, cDST, tree, arg);
+
+    } else if (symbol == cWITH_DST_1) {
+      if (cDEBUG) dbg.print("(with-dst-1)");
+      replace(exec, cDST, tree, (Byte) 1);
+
+    } else if (symbol == cWITH_DST_2) {
+      if (cDEBUG) dbg.print("(with-dst-2)");
+      replace(exec, cDST, tree, (Byte) 2);
+
+    } else if (symbol == cWITH_DST_3) {
+      if (cDEBUG) dbg.print("(with-dst-3)");
+      replace(exec, cDST, tree, (Byte) 3);
     }
   }
 
