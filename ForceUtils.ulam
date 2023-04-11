@@ -1,7 +1,9 @@
+local typedef C2D.Coord Coord;
 local typedef EventWindow.SiteNum SiteNum;
-local typedef IAttraction.Attraction Attraction;
 
 transient ForceUtils {
+  typedef AttractionUtils.Attraction Attraction;
+
   EventWindow ew;
 
   // NOTE: at origin
@@ -11,19 +13,17 @@ transient ForceUtils {
 
   C2D attractionForce() {
     AttractionUtils atu;
-    EventWindow ew;
     MDist mdist;
-
     C2D force;
-    for (Int i = 1; i <= mdist.getLastIndex(4); i++) {
-      SiteNum site = (SiteNum) i;
+    for (Int s = 1; s <= mdist.getLastIndex((MDist.Radius) ew.getRadius()); s++) {
+      SiteNum site = (SiteNum) s;
       Attraction attraction = atu.getAttraction(ew[0], ew[site]);
       if (attraction != 0) {
         C2D coord = ew.getCoordRaw(site);
         if (attraction > 0) {
-          force += (coord * (C2D.Coord) attraction) / (C2D.Coord) coord.length();
+          force += (coord * (Coord) attraction) / (Coord) coord.length();
         } else {
-          force -= (coord * (C2D.Coord) -attraction) / (C2D.Coord) coord.length();
+          force -= (coord * (Coord) -attraction) / (Coord) coord.length();
         }
       }
     }
@@ -35,18 +35,51 @@ transient ForceUtils {
     if (!(ew[0] is IBondable))
       return force;
 
+    STypeUtils stu;
+    Bool isPackage = (stu.getSType(0) == STypeUtils.cPACKAGE);
+
     IBondable& bondable = (IBondable&) ew[0];
     for (QBond.Num i = 0; i < bondable.getBondNum(); i++) {
       QBond& bond = bondable.getBond((QBond.Index) i);
       if (!bond.isAttached())
         continue;
 
+      // TEST: nudge package closer to agent it's attached to
       C2D coord = bond.getCoord();
+      if (isPackage && stu.getSType(coord) == STypeUtils.cAGENT) {
+        if (coord.length() > 3u) {
+          force += coord * 8;
+        } else if (coord.length() > 2u) {
+          force += coord * 4;
+        }
+        continue;
+      }
+
       if (coord.length() < 3u)
-        continue; // not stretched, TODO: set limit for bondable
+        continue; // not stretched (ignoring max. bond lengths < 4)
 
       force += coord;
     }
-    return force * 2;
+    return force;
   }
+
+  // C2D bondForce() {
+  //   C2D force;
+  //   if (!(ew[0] is IBondable))
+  //     return force;
+
+  //   IBondable& bondable = (IBondable&) ew[0];
+  //   for (QBond.Num i = 0; i < bondable.getBondNum(); i++) {
+  //     QBond& bond = bondable.getBond((QBond.Index) i);
+  //     if (!bond.isAttached())
+  //       continue;
+
+  //     C2D coord = bond.getCoord();
+  //     if (coord.length() < 3u)
+  //       continue; // not stretched (ignoring max. bond lengths < 4)
+
+  //     force += coord;
+  //   }
+  //   return force;
+  // }
 }

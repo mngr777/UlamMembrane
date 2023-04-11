@@ -1,6 +1,10 @@
 /**
    Static (stable?) type value that can be used
    to search for or build atoms.
+
+   NOTE: we'll probably need groups of stypes later, so e.g.
+   "agent" is a group of multiple stypes, and each stype is buildable.
+   For now it's not clear what's actually required.
  */
 transient STypeUtils + Fail {
   typedef EventWindow.SiteNum SiteNum;
@@ -8,8 +12,9 @@ transient STypeUtils + Fail {
 
   constant SType cEMPTY    = 0;
   constant SType cDEFAULT  = 1;
-  constant SType cPACKAGE  = 2;
-  constant SType cMEMBRANE = 3;
+  constant SType cAGENT    = 2;
+  constant SType cPACKAGE  = 3;
+  constant SType cMEMBRANE = 4;
 
   AtomUtils au;
   EventWindow ew;
@@ -25,6 +30,8 @@ transient STypeUtils + Fail {
   SType getSType(Atom& atom) {
     if (au.isEmpty(atom))
       return cEMPTY;
+    if (atom is QAgent)
+      return cAGENT;
     if (atom is Package)
       return cPACKAGE;
     if (atom is Membrane)
@@ -34,6 +41,9 @@ transient STypeUtils + Fail {
   }
 
   Atom make(SType stype) {
+    if (stype == cAGENT) {
+      fail("Cannot build atom of `agent' type");
+    }
     if (stype == cPACKAGE) {
       Package atom;
       return atom;

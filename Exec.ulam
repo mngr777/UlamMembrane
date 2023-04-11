@@ -3,7 +3,7 @@ local typedef EvalStatefulConditional ESC;
 local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
-element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
+element Exec : QAgent + QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;
   typedef DataUtils.Integer Integer;

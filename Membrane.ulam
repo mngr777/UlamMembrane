@@ -2,7 +2,7 @@
    \color #0054d2
    \symmetry all
  */
-element Membrane : QBondableT(4) + QDiffusableT(100, 2) + QAttractionT(AttractionUtils.cTYPE_MEMBRANE) {
+element Membrane : QBondableT(4) + QDiffusableT(100, 2) {
   constant Bits cCOLOR_DEFAULT = 0x000054d2;
   constant Bits cCOLOR_DEFECT  = 0x005428c8;
 
@@ -15,13 +15,14 @@ element Membrane : QBondableT(4) + QDiffusableT(100, 2) + QAttractionT(Attractio
     diffuse();
   }
 
+  Bool hasPrevAndNext() {
+    return getBond(cPREV).isAttached() && getBond(cNEXT).isAttached();
+  }
+
   @Override ARGB getColor(Unsigned selector) {
     ColorUtils cu;
     Bits hex = cCOLOR_DEFAULT;
-    if (!getBond(cPREV).isAttached() ||
-        !getBond(cNEXT).isAttached() ||
-        (false && !getBond(cOTHER).isAttached()))
-    {
+    if (!hasPrevAndNext()) {
       hex = cCOLOR_DEFECT;
     }
     return cu.color(hex);
