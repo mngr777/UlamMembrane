@@ -79,75 +79,6 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
   }
 }
 
-
-/**
-   \symbol DT
- */
-element Demo_TreeBuilder : QTreeBuilder + QBondableT(2) + QDiffusableT(100) + QMortal {
-  constant State cSTATE_DETACH_SEQUENCE = cSTATE_BUILD_DONE;
-  constant State cSTATE_ATTACH_EXEC     = cSTATE_BUILD_DONE + 1;
-
-  virtual IBondable& getBondable() {
-    return self;
-  }
-
-  @Override Void behave() {
-    step();
-
-    if (isState(cSTATE_DONE)) {
-      die();
-    } else {
-      diffuse();
-    }
-  }
-
-  Void step() {
-    if (isState(cSTATE_DETACH_SEQUENCE)) {
-      detachSequence();
-
-    } else if (isState(cSTATE_ATTACH_EXEC)) {
-      attachExec();
-
-    } else {
-      self.QTreeBuilder.step();
-    }
-  }
-
-  Void detachSequence() {
-    getBond(cSEQUENCE).detach();
-    setState(cSTATE_ATTACH_EXEC);
-  }
-
-  Void attachExec() {
-    BondStatus bs;
-    BondUtils bu;
-    EventWindow ew;
-    EventWindowMisc ewm;
-
-    QBond& bond = getBond(cTREE);
-    SiteNum treeSite = bond.getSiteNumber();
-    Package& tree = (Package&) ew[treeSite];
-
-    // Build exec
-    Exec exec;
-    SiteNum site = ewm.findEmptySiteAround(treeSite, 1u, bu.maxDist(exec, tree));
-    if (site == SiteNum.maxof)
-      return;
-    ew[site] = exec;
-
-    // Replace ourselves with exec
-    BS.Status status = bu.replace(treeSite, Package.cCOMMON, site, Exec.cPROGRAM);
-    if (!bs.isOk(status)) {
-      Empty empty;
-      ew[site] = empty;
-      return;
-    }
-
-    setState(cSTATE_DONE);
-  }
-}
-
-
 local typedef QBondableT(1) QBondable1;
 
 /**
@@ -419,12 +350,27 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
    (with-input
      (if-attached
        (widh-dst           ;; Move to "next" if possible, otherwise try "other"
-         Membrane.cNEXT,
+         Membrane.cNEXT,   ; TODO: shorten to (if-not (traverse-3) (traverse-2))
          (if-attached-next
            (traverse-3)
            (traverse-2)))
        (attach-to          ;; Find a membrane to attach to
          STU.cMEMBRANE)))
+
+   # Bootstrap
+   (with-input
+     (if-attached
+     +-(if-matches                ; Is the package we attached to tagged and active?
+     |   ES.cTAGGED | ES.cACTIVE
+     |   (prog2                   ; 1. then move to next
+     |     (traverse-2)
+     |     (with-dst-2            ; 2. and attach TreeBuilder to now previous package
+     |       (build-next
+     |         STU.cTREE_BUILDER
+     |         Package.cCOMMON))
+     +-(attach-to-flags
+         STU.cPACKAGE
+         ES.cNO_EXEC)))
 
    # Build other layer atoms:
     1 (with-input

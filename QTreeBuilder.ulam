@@ -1,10 +1,16 @@
 local typedef BondStatus BS;
-local typedef EventWindow.SiteNum SiteNum;
 local typedef PackageData.Arity Arity;
 
 local constant Bool cDEBUG = true;
 
-quark QTreeBuilder : QStateT(4) {
+// NOTE: QBondableT is in the quark because implementing
+// `virtual IBondable& getBondable() { return self; }`
+// in derived class somehow leads to `EventWindow` class being hazy in derived class.
+// Unfortunately I couldn't reproduce this issue separately.
+
+quark QTreeBuilder : QStateT(4) + QBondableT(2) {
+  typedef EventWindow.SiteNum SiteNum;
+
   constant QBond.Index cSEQUENCE = 0u;
   constant QBond.Index cTREE = 1u;
 
@@ -17,7 +23,10 @@ quark QTreeBuilder : QStateT(4) {
 
   QBond.Index mDownIndex; // child index to move to in `cSTATE_MOVE_DOWN`
 
-  virtual IBondable& getBondable();
+  IBondable& getBondable() {
+    EventWindow ew;
+    return (IBondable&) ew[0];
+  }
 
   Void step() {
     if (isState(cSTATE_READY)) {

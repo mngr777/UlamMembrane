@@ -44,9 +44,9 @@ transient ForceUtils {
       if (!bond.isAttached())
         continue;
 
-      // TEST: nudge package closer to agent it's attached to
+      // TEST: nudge package closer to executor it's attached to
       C2D coord = bond.getCoord();
-      if (isPackage && stu.getSType(coord) == STypeUtils.cAGENT) {
+      if (isPackage && stu.getSType(coord) == STypeUtils.cEXEC) {
         if (coord.length() > 3u) {
           force += coord * 8;
         } else if (coord.length() > 2u) {

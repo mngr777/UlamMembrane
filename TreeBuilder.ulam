@@ -1,17 +1,65 @@
+local typedef BondStatus BS;
+local typedef EventWindow.SiteNum SiteNum;
+
 /**
-   Default tree builder.
-
    \symbol TB
-   \symmetry all
  */
-element TreeBuilder : QTreeBuilder + QBondableT(2) + QDiffusableT(100) {
-
-  virtual IBondable& getBondable() {
-    return self;
-  }
+element TreeBuilder : QTreeBuilder + QDiffusableT(100) + QMortal {
+  constant State cSTATE_DETACH_SEQUENCE = cSTATE_BUILD_DONE;
+  constant State cSTATE_ATTACH_EXEC     = cSTATE_BUILD_DONE + 1;
 
   @Override Void behave() {
     step();
-    diffuse();
+
+    if (isState(cSTATE_DONE)) {
+      die();
+    } else {
+      diffuse();
+    }
+  }
+
+  Void step() {
+    if (isState(cSTATE_DETACH_SEQUENCE)) {
+      detachSequence();
+
+    } else if (isState(cSTATE_ATTACH_EXEC)) {
+      attachExec();
+
+    } else {
+      self.QTreeBuilder.step();
+    }
+  }
+
+  Void detachSequence() {
+    getBond(cSEQUENCE).detach();
+    setState(cSTATE_ATTACH_EXEC);
+  }
+
+  Void attachExec() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& bond = getBond(cTREE);
+    SiteNum treeSite = bond.getSiteNumber();
+    Package& tree = (Package&) ew[treeSite];
+
+    // Build exec
+    Exec exec;
+    SiteNum site = ewm.findEmptySiteAround(treeSite, 1u, bu.maxDist(exec, tree));
+    if (site == SiteNum.maxof)
+      return;
+    ew[site] = exec;
+
+    // Replace ourselves with exec
+    BS.Status status = bu.replace(treeSite, Package.cCOMMON, site, Exec.cPROGRAM);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+
+    setState(cSTATE_DONE);
   }
 }

@@ -5,8 +5,8 @@ quark QStateT(Unary(10) cSTATE_BITS = 4) {
   typedef Unsigned(cSTATE_BITS) State;
 
   constant State cSTATE_INIT  = 0;
-  constant State cSTATE_ERROR = (State) ((Int) (1 << cSTATE_BITS) - 2);
-  constant State cSTATE_DONE  = (State) ((Int) (1 << cSTATE_BITS) - 1);
+  constant State cSTATE_ERROR = (State) ((Int) (1u << cSTATE_BITS) - 2);
+  constant State cSTATE_DONE  = (State) ((Int) (1u << cSTATE_BITS) - 1);
 
   State mState = cSTATE_INIT;
 

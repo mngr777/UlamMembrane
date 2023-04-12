@@ -8,7 +8,8 @@ transient EvalStatefulFunction : Eval {
   constant State cSTATE_CONNECT_OTHER_FORCE  = 34;
   constant State cSTATE_TRAVERSE             = 35;
   constant State cSTATE_BUILD                = 36;
-  constant State cSTATE_MOVE_TO_OTHER        = 37;
+  constant State cSTATE_BUILD_NEXT           = 37;
+  constant State cSTATE_MOVE_TO_OTHER        = 38;
 
   constant State cSTATE_FIRST = cSTATE_ATTACH_OTHER_TO_NEXT;
   constant State cSTATE_LAST  = cSTATE_MOVE_TO_OTHER;
@@ -25,6 +26,9 @@ transient EvalStatefulFunction : Eval {
 
     } else if (exec.isState(cSTATE_BUILD)) {
       done = build(exec);
+
+    } else if (exec.isState(cSTATE_BUILD_NEXT)) {
+      return buildNext(exec, done);
 
     } else if (exec.isState(cSTATE_MOVE_TO_OTHER)) {
       done = moveToOther(exec);
@@ -103,10 +107,11 @@ transient EvalStatefulFunction : Eval {
     if (exec.getBond(index).isAttached())
       return true; // already have an atom attached
 
+    // Make new atom
     Atom atom = stu.make(stype);
     IBondable& bondable = (IBondable&) atom;
 
-    // Build
+    // Place new atom
     Radius radius = bu.maxDist(bondable, exec);
     EventWindowMisc ewm;
     SiteNum buildSite = ewm.findEmptySite(1, radius);
@@ -121,6 +126,53 @@ transient EvalStatefulFunction : Eval {
       ew[buildSite] = empty;
     }
     return (status != BS.cINACCESSIBLE);
+  }
+
+  Bool buildNext(Exec& exec, Bool& done) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec, cDST);
+    SType stype = getSType(exec, cREG1);
+    Index bondIndex = getBondIndex(exec, cREG2);
+    done = false;
+
+    // Get currently attached bondable
+    QBond& bond = exec.getBond(index);
+    if (!bond.isAttached()) {
+      // nothing attached to selected bond
+      done = true;
+      return false;
+    }
+    SiteNum site = bond.getSiteNumber();
+    IBondable& current = (IBondable&) ew[site];
+
+    // Check target bond
+    QBond& nextBond = current.getBond(nextIndex);
+    if (nextBond.isAttached()) {
+      // something is already attached to the target bond
+      done = true;
+      return false;
+    }
+
+    // Make new atom
+    Atom atom = stu.make(stype);
+    IBondable& next = (IBondable&) atom;
+
+    // Place new atom
+    Radius radius = bu.maxDist(next, current);
+    EventWindowMisc ewm;
+    SiteNum nextSite = ewm.findEmptySiteAround(site, 1, radius);
+    if (nextSite == SiteNum.maxof)
+      return false;
+    ew[nextSite] = atom;
+
+    // Attach to current
+    BS.Status status = bu.attach(site, nextIndex, nextSite, bondIndex);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[nextSite] = empty;
+    }
+    done = (status != BS.cINACCESSIBLE);
+    return bs.isOk(status);
   }
 
   // TODO: return and set done value

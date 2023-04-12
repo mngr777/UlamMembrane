@@ -1,3 +1,4 @@
+local typedef EvalSearch ES;
 local typedef EvalStatefulFunction ESF;
 local typedef BondUtils BU;
 
@@ -17,19 +18,21 @@ transient EvalFunction : Eval {
   constant Symbol cSWAP_INPUT_OUTPUT    = 0x13;
 
   constant Symbol cATTACH_TO            = 0x21;
-  constant Symbol cDETACH               = 0x22;
-  constant Symbol cDETACH_OTHER         = 0x23;
+  constant Symbol cATTACH_TO_FLAGS      = 0x22;
+  constant Symbol cDETACH               = 0x23;
+  constant Symbol cDETACH_OTHER         = 0x24;
 
-  constant Symbol cATTACH_OTHER_TO_NEXT = 0x24;
-  constant Symbol cCONNECT_OTHER_FORCE  = 0x25;
+  constant Symbol cATTACH_OTHER_TO_NEXT = 0x25;
+  constant Symbol cCONNECT_OTHER_FORCE  = 0x26;
 
-  constant Symbol cTRAVERSE             = 0x26;
-  constant Symbol cTRAVERSE_1           = 0x27;
-  constant Symbol cTRAVERSE_2           = 0x28;
-  constant Symbol cTRAVERSE_3           = 0x29;
+  constant Symbol cTRAVERSE             = 0x27;
+  constant Symbol cTRAVERSE_1           = 0x28;
+  constant Symbol cTRAVERSE_2           = 0x29;
+  constant Symbol cTRAVERSE_3           = 0x2a;
 
-  constant Symbol cBUILD                = 0x2a;
-  constant Symbol cMOVE_TO_OTHER        = 0x2b;
+  constant Symbol cBUILD                = 0x2b;
+  constant Symbol cBUILD_NEXT           = 0x2c;
+  constant Symbol cMOVE_TO_OTHER        = 0x2d;
 
   Arity getArity(Symbol symbol) {
     return getArgNum(symbol);
@@ -37,7 +40,8 @@ transient EvalFunction : Eval {
 
   Arity getArgNum(Symbol symbol) {
     if (symbol == cPROG2 ||
-        symbol == cBUILD)
+        symbol == cBUILD ||
+        symbol == cBUILD_NEXT)
     {
       return 2;
     }
@@ -104,6 +108,10 @@ transient EvalFunction : Eval {
       if (cDEBUG) dbg.print("(attach-to)");
       return (Byte) attach(exec, findSType(exec, (SType) arg1));
 
+    } else if (symbol == cATTACH_TO_FLAGS) {
+      if (cDEBUG) dbg.print("(attach-to-flags)");
+      return (Byte) attach(exec, findSType(exec, (SType) arg1, arg2));
+
     } else if (symbol == cDETACH) {
       if (cDEBUG) dbg.print("(detach)");
       return (Byte) detach(exec);
@@ -142,6 +150,12 @@ transient EvalFunction : Eval {
       exec.set(cREG1, arg1); // stype
       exec.set(cDST, arg2);  // new atom bond to attach to
       exec.setState(ESF.cSTATE_BUILD);
+
+    } else if (symbol == cBUILD_NEXT) {
+      if (cDEBUG) dbg.print("(build-next)");
+      exec.set(cREG1, arg1);
+      exec.set(cREG2, arg2);
+      exec.setState(ESF.cSTATE_BUILD_NEXT);
 
     } else if (symbol == cMOVE_TO_OTHER) {
       if (cDEBUG) dbg.print("(move-to-other)");
@@ -183,15 +197,22 @@ transient EvalFunction : Eval {
   }
 
   SiteNum findSType(Exec& exec, SType type) {
-    Atom atom = stu.make(type);
-    return findSTypeRadius(exec, type, bu.maxDist((IBondable&) atom, exec));
+    return findSType(exec, type, ES.cNO_FLAGS);
   }
 
-  SiteNum findSTypeRadius(Exec& exec, SType type, Radius radius) {
+  SiteNum findSType(Exec& exec, SType type, Byte flags) {
+    Atom atom = stu.make(type);
+    Radius radius = bu.maxDist((IBondable&) atom, exec);
+    return findSTypeRadius(exec, type, radius, flags);
+  }
+
+  SiteNum findSTypeRadius(Exec& exec, SType type, Radius radius, Byte flags) {
+    EvalSearch es;
     WindowServices ws;
     ws.reset(1u, radius);
     for (Int s = ws.next(); s >= 0; s = ws.next()) {
-      if (stu.getSType((SiteNum) s) == type)
+      SiteNum site = (SiteNum) s;
+      if (stu.getSType(site) == type && es.match(site, flags))
         ws.hit();
     }
     SiteNum pick = ws.getPick();

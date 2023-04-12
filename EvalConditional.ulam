@@ -1,4 +1,6 @@
+local typedef EvalSearch ES;
 local typedef EvalStatefulConditional ESC;
+local typedef STypeUtils STU:
 
 local constant Bool cDEBUG = Exec.cDEBUG;
 
@@ -6,10 +8,13 @@ transient EvalConditional : Eval {
   constant Symbol cIF                    = 0x1;
   constant Symbol cIF_ZERO               = 0x2;
   constant Symbol cIF_NOT_ZERO           = 0x3;
+
   constant Symbol cIF_ATTACHED           = 0x9;
   constant Symbol cIF_ATTACHED_NEXT      = 0xa;
   constant Symbol cIF_ATTACHED_NEXT_2    = 0xb;
   constant Symbol cIF_OTHER_MATCHES_NEXT = 0x11;
+
+  constant Symbol cIF_MATCHES_FLAGS      = 0x11;
 
   constant Bool cDEBUG_COND = true;
 
@@ -55,6 +60,10 @@ transient EvalConditional : Eval {
       if (cDEBUG) dbg.print("(if-other-matches-next)");
       cond = isOtherMatchingNext(exec);
 
+    } else if (symbol == cIF_MATCHES_FLAGS) {
+      if (cDEBUG) dbg.print("(if-matches-flags)");
+      cond = isMatchingFlags(exec, arg);
+
     } else {
       dbg.print("EvalConditional.eval: unknown symbol");
       dbg.print((Unsigned) symbol);
@@ -96,5 +105,17 @@ transient EvalConditional : Eval {
       return false;
 
     return (otherBond.getSiteNumber() == nextBond.getSiteNumber(site));
+  }
+
+  Bool isMatchingFlags(Exec& exec, Byte flags) {
+    Index index = getBondIndex(exec, cSRC);
+
+    QBond& bond = exec.getBond(index);
+    if (!bond.isAttached())
+      return false;
+
+    EvalSearch es;
+    SiteNum site = bond.getSiteNumber();
+    return es.match(site, flags);
   }
 }

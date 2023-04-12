@@ -24,20 +24,13 @@ transient AttractionUtils {
     // * this can explode quickly, but then we can use
     //   more broad categories of atoms including multiple stypes
     // * the numbers are made up
+
+
     if (type1 == STU.cDEFAULT) {
 
-    } else if (type1 == STU.cAGENT) {
-
     } else if (type1 == STU.cPACKAGE) {
-      if (type2 == STU.cMEMBRANE) {
-        if (distance < 2u)
-          return -16;
-        if (distance < 3u)
-          return -8;
-        if (distance < 4u)
-          return -4;
-        return -2;
-      }
+      if (type2 == STU.cMEMBRANE)
+        return getMembraneAttractionAt(distance);
 
     } else if (type1 == STU.cMEMBRANE) {
       if (type2 == STU.cMEMBRANE) {
@@ -50,9 +43,22 @@ transient AttractionUtils {
           return -16;
         if (distance < 3u)
           return -8;
+
+      } else if (type2 == STU.cTREE_BUILDER) {
+        return getMembraneAttractionAt(distance);
       }
     }
 
     return 0;
+  }
+
+  Attraction getMembraneAttractionAt(Unsigned distance) {
+    if (distance < 2u)
+      return -16;
+    if (distance < 3u)
+      return -8;
+    if (distance < 4u)
+      return -4;
+    return -2;
   }
 }

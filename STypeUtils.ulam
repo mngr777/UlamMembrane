@@ -1,20 +1,17 @@
 /**
    Static (stable?) type value that can be used
    to search for or build atoms.
-
-   NOTE: we'll probably need groups of stypes later, so e.g.
-   "agent" is a group of multiple stypes, and each stype is buildable.
-   For now it's not clear what's actually required.
  */
 transient STypeUtils + Fail {
   typedef EventWindow.SiteNum SiteNum;
   typedef Unsigned SType;
 
-  constant SType cEMPTY    = 0;
-  constant SType cDEFAULT  = 1;
-  constant SType cAGENT    = 2;
-  constant SType cPACKAGE  = 3;
-  constant SType cMEMBRANE = 4;
+  constant SType cEMPTY        = 0;
+  constant SType cDEFAULT      = 1;
+  constant SType cPACKAGE      = 2;
+  constant SType cMEMBRANE     = 3;
+  constant SType cEXEC         = 4;
+  constant SType cTREE_BUILDER = 5;
 
   AtomUtils au;
   EventWindow ew;
@@ -30,27 +27,41 @@ transient STypeUtils + Fail {
   SType getSType(Atom& atom) {
     if (au.isEmpty(atom))
       return cEMPTY;
-    if (atom is QAgent)
-      return cAGENT;
+
     if (atom is Package)
       return cPACKAGE;
+
     if (atom is Membrane)
       return cMEMBRANE;
+
+    if (atom is Exec)
+      return cEXEC;
+
+    if (atom is TreeBuilder)
+      return cTREE_BUILDER;
 
     return cDEFAULT;
   }
 
   Atom make(SType stype) {
-    if (stype == cAGENT) {
-      fail("Cannot build atom of `agent' type");
-    }
     if (stype == cPACKAGE) {
       Package atom;
       return atom;
     }
+
     if (stype == cMEMBRANE) {
       Membrane atom;
       return atom;
+    }
+
+    if (stype == cEXEC) {
+      Exec exec;
+      return exec;
+    }
+
+    if (stype == cTREE_BUILDER) {
+      TreeBuilder builder;
+      return builder;
     }
 
     // keeping compiler happy by always returning something
