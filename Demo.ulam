@@ -3,17 +3,23 @@ local typedef EventWindow.SiteNum SiteNum;
 local typedef PackageData PD;
 local typedef STypeUtils STU;
 
-element Demo : QStateT(3) + QBondableT(1) + QMortal {
-  constant State cPLACE_MEMBRANE_BUILDER = 0;
-  constant State cBUILD_SEQUENCE         = 1;
+element Demo : QStateT(3) + QBondableT(2) + QMortal {
+  constant State cSTATE_PLACE_MEMBRANE_BUILDER = 0;
+  constant State cSTATE_BUILD_SEQUENCE         = 1;
+  constant State cSTATE_ATTACH_FIRST           = 2;
+  constant State cSTATE_COMPLETE               = 3;
 
   Unsigned mCount = 0;
 
   @Override Void behave() {
-    if (isState(cPLACE_MEMBRANE_BUILDER)) {
+    if (isState(cSTATE_PLACE_MEMBRANE_BUILDER)) {
       placeMembraneBuilder();
-    } else if (isState(cBUILD_SEQUENCE)) {
+    } else if (isState(cSTATE_BUILD_SEQUENCE)) {
       buildSequence();
+    } else if (isState(cSTATE_ATTACH_FIRST)) {
+      attachFirst();
+    } else if (isState(cSTATE_COMPLETE)) {
+      complete();
     } else if (isState(cSTATE_DONE)) {
       die();
     }
@@ -25,7 +31,7 @@ element Demo : QStateT(3) + QBondableT(1) + QMortal {
     Demo_MembraneBuilder builder;
     ew[1] = builder;
 
-    setState(cBUILD_SEQUENCE);
+    setState(cSTATE_BUILD_SEQUENCE);
   }
 
   Void buildSequence() {
@@ -35,7 +41,40 @@ element Demo : QStateT(3) + QBondableT(1) + QMortal {
     if (builder.buildNext(self, 0, data.getData(mCount), data.getAux(mCount)))
       mCount++;
 
-    if (mCount >= data.cSIZE)
+    if (mCount == 2u && !getBond(1).isAttached()) {
+      // Attach to first item, so we can close the ring later
+      setState(cSTATE_ATTACH_FIRST);
+
+    } else if (mCount >= data.cSIZE) {
+      setState(cSTATE_COMPLETE);
+    }
+  }
+
+  Void attachFirst() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(0);
+    SiteNum secondSite = bond.getSiteNumber();
+    Package& second = (Package&) ew[secondSite];
+
+    QBond& prevBond = second.getBond(Package.cPREV);
+    SiteNum firstSite = prevBond.getSiteNumber(secondSite);
+
+    // Attach to bond 1
+    if (bs.isOk(bu.attach(0, 1, firstSite, Package.cCOMMON)))
+      setState(cSTATE_BUILD_SEQUENCE); // continue building sequence
+  }
+
+  Void complete() {
+    BondStatus bs;
+    BondUtils bu;
+
+    SiteNum siteFirst = getBond(1).getSiteNumber();
+    SiteNum siteLast = getBond(0).getSiteNumber();
+
+    if (bs.isOk(bu.attach(siteFirst, Package.cPREV, siteLast, Package.cNEXT)))
       setState(cSTATE_DONE);
   }
 }
