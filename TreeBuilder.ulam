@@ -2,6 +2,8 @@ local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
 
 /**
+   Builds a tree from sequence and attaches Exec atom to it.
+
    \symbol TB
  */
 element TreeBuilder : QTreeBuilder + QDiffusableT(100) + QMortal {

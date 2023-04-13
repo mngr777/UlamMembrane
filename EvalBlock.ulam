@@ -11,14 +11,17 @@ transient EvalBlock : Eval {
   constant Bool cDEBUG_VALUE = false;
 
   Arity getArity(Symbol symbol) {
-    if (symbol == cWITH_DST)
-      return 2;
-    return 1;
+    return (Arity) (getArgNum(symbol) + 1u);
   }
 
   Arity getArgNum(Symbol symbol) {
-    if (symbol == cWITH_DST)
+    if (symbol == cWITH_DST ||
+        symbol == cWITH_REG1 ||
+        symbol == cWITH_REG2)
+    {
       return 1;
+    }
+
     return 0;
   }
 

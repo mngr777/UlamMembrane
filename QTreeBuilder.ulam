@@ -43,11 +43,19 @@ quark QTreeBuilder : QStateT(4) + QBondableT(2) {
   }
 
   Void attach() {
-    QBond& bond = getBondable().getBond(cSEQUENCE);
-    if (bond.isAttached())
-      setState(cSTATE_BUILD);
+    EventWindow ew;
 
-    SiteNum site = findActive();
+    QBond& bond = getBondable().getBond(cSEQUENCE);
+    if (bond.isAttached()) {
+      // Check if attach atom is a package: TreeBuilder can be
+      // still attached to Exec that just built it
+      if (!(ew[bond.getSiteNumber()] is Package))
+        return;
+
+      setState(cSTATE_BUILD);
+    }
+
+    SiteNum site = findTagged();
     bond.attach(cSEQUENCE, site, Package.cCOMMON);
   }
 
@@ -77,7 +85,7 @@ quark QTreeBuilder : QStateT(4) + QBondableT(2) {
     } else if (status == BS.cNO_NEXT) {
       setState(cSTATE_BUILD_DONE);
 
-    } else if (status != BS.cINACCESSIBLE) {
+    } else if (status != BS.cINACCESSIBLE && status != BS.cOTHER_IS_ATTACHED) {
       if (cDEBUG) {
         dbg.print("QTreeBuilder.advance failed, status:");
         dbg.print(status);
@@ -125,7 +133,7 @@ quark QTreeBuilder : QStateT(4) + QBondableT(2) {
     }
   }
 
-  SiteNum findActive() {
+  SiteNum findTagged() {
     BondUtils bu;
     EventWindow ew;
     PackageData pd;
@@ -139,7 +147,7 @@ quark QTreeBuilder : QStateT(4) + QBondableT(2) {
         continue;
 
       Package& pkg = (Package&) ew[site];
-      if (!pd.isExec(pkg.getData()) && pd.isActive(pkg.getAux()))
+      if (!pd.isExec(pkg.getData()) && pkg.hasTag())
         ws.hit();
     }
     return ws.getPick();

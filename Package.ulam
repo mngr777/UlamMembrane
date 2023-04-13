@@ -42,8 +42,9 @@ element Package : QBondable4 + ITaggable + QDiffusableT(100) {
 
   @Override Tag getTag() {
     PackageData pd;
-    Datum data = getAux();
-    return (pd.isExec(data) && pd.hasValue(data))
+    Datum data = getData();
+    Datum aux = getAux();
+    return (!pd.isExec(data) && pd.hasValue(aux))
       ? pd.getTag(data)
       : ITaggable.cNO_TAG;
   }

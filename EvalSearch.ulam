@@ -1,0 +1,70 @@
+local typedef STypeUtils STU;
+
+transient EvalSearch {
+  typedef DataUtils.Byte Byte;
+  typedef DataUtils.Datum Datum;
+  typedef EventWindow.SiteNum SiteNum;
+  typedef STypeUtils.SType SType;
+
+  constant Byte cNO_FLAGS  = 0x0;
+
+  // Package
+  constant Byte cEXEC       = 0x1;
+  constant Byte cNO_EXEC    = 0x2;
+  constant Byte cTAGGED     = 0x4;
+  constant Byte cNOT_TAGGED = 0x8;
+  constant Byte cACTIVE     = 0x10;
+  constant Byte cNOT_ACTIVE = 0x20;
+
+  EventWindow ew;
+  STypeUtils stu;
+
+  Bool match(SiteNum site, Byte flags) {
+    return match(ew[site], flags);
+  }
+
+  Bool match(C2D coord, Byte flags) {
+    return match(ew[coord], flags);
+  }
+
+  Bool match(Atom& atom, Byte flags) {
+    SType stype = stu.getSType(atom);
+
+    if (stype == STU.cPACKAGE) {
+      Package& pkg = (Package&) atom;
+      return packageMatch(pkg, flags);
+    }
+    return false;
+  }
+
+  Bool packageMatch(Package& pkg, Byte flags) {
+    PackageData pd;
+
+    Datum data = pkg.getData();
+    Datum aux = pkg.getAux();
+
+    if (isSet(flags, cEXEC) && !pd.isExec(data))
+      return false;
+
+    if (isSet(flags, cNO_EXEC) && pd.isExec(data))
+      return false;
+
+    if (isSet(flags, cTAGGED) && !pkg.hasTag())
+      return false;
+
+    if (isSet(flags, cNOT_TAGGED) && pkg.hasTag())
+      return false;
+
+    if (isSet(flags, cACTIVE) && !pd.isActive(aux))
+      return false;
+
+    if (isSet(flags, cNOT_ACTIVE) && pd.isActive(aux))
+      return false;
+
+    return true;
+  }
+
+  Bool isSet(Byte flags, Byte flag) {
+    return (flags & flag) != cNO_FLAGS;
+  }
+}

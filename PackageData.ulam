@@ -19,7 +19,7 @@ transient PackageData {
 
   // Data
   //
-  // arity  type unused        tag/symbol/value
+  // arity  type unused        symbol/value
   //   v     v     v             v
   // | 0 1 | 2 3 | 4 5 | 6 | 7 | 0 1 2 3 4 5 6 7
   //                     ^   ^
@@ -38,7 +38,7 @@ transient PackageData {
   // Non-executable: tag
   // Executable: either final result of node evaluation or stored 1st argument
   //
-  //  unused  active/final? value
+  //  unused  active/final? tag/value
   //   v             v       v
   // | 0 1 2 3 4 5 | 6 | 7 | 0 1 2 3 4 5 6 7
   //                     ^

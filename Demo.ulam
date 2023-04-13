@@ -1,5 +1,6 @@
 local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
+local typedef EvalSearch ES;
 local typedef PackageData PD;
 local typedef STypeUtils STU;
 
@@ -8,6 +9,7 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
   constant State cSTATE_BUILD_SEQUENCE         = 1;
   constant State cSTATE_ATTACH_FIRST           = 2;
   constant State cSTATE_COMPLETE               = 3;
+  constant State cSTATE_ATTACH_TREE_BUILDER    = 4;
 
   Unsigned mCount = 0;
 
@@ -20,6 +22,8 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
       attachFirst();
     } else if (isState(cSTATE_COMPLETE)) {
       complete();
+    } else if (isState(cSTATE_ATTACH_TREE_BUILDER)) {
+      attachTreeBuilder();
     } else if (isState(cSTATE_DONE)) {
       die();
     }
@@ -75,7 +79,35 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
     SiteNum siteLast = getBond(0).getSiteNumber();
 
     if (bs.isOk(bu.attach(siteFirst, Package.cPREV, siteLast, Package.cNEXT)))
-      setState(cSTATE_DONE);
+      setState(cSTATE_ATTACH_TREE_BUILDER);
+  }
+
+  Void attachTreeBuilder() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    // Get first package
+    QBond& firstBond = getBond(1);
+    SiteNum firstSite = firstBond.getSiteNumber();
+    Package& first = (Package&) ew[firstSite];
+
+    // Place builder
+    TreeBuilder builder;
+    SiteNum site = ewm.findEmptySiteAround(first, 1u, bu.maxDist(builder, first));
+    if (site == SiteNum.maxof)
+      return;
+    ew[site] = builder;
+
+    // Attach to first package (replace ourselves)
+    BS.Status status = bu.replace(firstSite, Package.cCOMMON, site, TreeBuilder.cSEQUENCE);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+    setState(cSTATE_DONE);
   }
 }
 
@@ -87,7 +119,7 @@ local typedef QBondableT(1) QBondable1;
 element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + QMortal {
   typedef C2D.Dir Dir;
 
-  constant Unsigned(5) cSIDE_LENGTH = 16;
+  constant Unsigned(5) cSIDE_LENGTH = 20;
   constant Unsigned(2) cSTEP_LENGTH = 2;
 
   constant State cSTATE_MOVE_OUT       = 0;
@@ -357,20 +389,28 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
        (attach-to          ;; Find a membrane to attach to
          STU.cMEMBRANE)))
 
-   # Bootstrap
-   (with-input
-     (if-attached
-     +-(if-matches                ; Is the package we attached to tagged and active?
-     |   ES.cTAGGED | ES.cACTIVE
-     |   (prog2                   ; 1. then move to next
-     |     (traverse-2)
-     |     (with-dst-2            ; 2. and attach TreeBuilder to now previous package
-     |       (build-next
-     |         STU.cTREE_BUILDER
-     |         Package.cCOMMON))
-     +-(attach-to-flags
-         STU.cPACKAGE
-         ES.cNO_EXEC)))
+    1 (with-input
+    2   (if-attached
+    3   +-(with-reg1
+    4   |   ES.cTAGGED | ES.cACTIVE
+    5   |   (if-matches-flags
+    6   |   +-(prog2
+    7   |   |   (prog2
+    8   |   |     (deactivate)
+    9   |   |     (traverse-2))
+   10   |   |   (with-output
+   11   |   |     (if
+   12   |   |       (build
+   13   |   |         STU.cTREE_BUILDER
+   14   |   |         TreeBuilder.cSEQUENCE))
+   15   |   |       (with-dst-1
+   16   |   |         (with-reg1
+   17   |   |           Package.cCOMMON
+   18   |   |           (move-to-other-next)))))
+   19   |   +-(traverse-2)))
+   20   +-(attach-to-flags
+   21       STU.cPACKAGE
+   22       ES.cNO_EXEC)))
 
    # Build other layer atoms:
     1 (with-input
@@ -397,37 +437,37 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
       but not attached to each other:       but one layer has extra atoms in between
                                             because of growth:
 
-   "other" layer ->   o   o                    -o-------o-
-                      |   |                     |       |
-   current layer ->  -o---o-                   -o---o---o-
-                      |                         |
-                      @                         @
-   18 (with-input
-   19   (if-attached
-   20   +-(prog2
-   21   |   (with-dst-2
-   22   |     (if-attached-next                        ; Does current membrane atom have "other"?
-   23   |     +-(if
-   24   |     | +-(attach-other-to-next)               ; * attach output bond to "other" membrane
-   25   |     | +-(with-dst-3
-   26   |     |     (if-attached-next                  ;   Is there next membrane atom?
-   27   |     |     +-(prog2
-   28   |     |     |   (traverse)                     ;   - move to next
-   29   |     |     |   (with-dst-2
-   30   |     |     |     (if-attached-next            ;     does next atom have "other" attached?
-   31   |     |     |     +-(prog2
-   32   |     |     |     |   (traverse)               ;     1. move to it
-   33   |     |     |     |   (with-dst-1
-   34   |     |     |     |     (if-other-matches-next ;     2. is it "next" for output?
-   35   |     |     |     |       (noop)               ;        nothing to do then
-   36   |     |     |     |       (connect-other-force ;     3. connect membrane prev/next atoms
-   37   |     |     |     |         Membrane.cNEXT)))) ;        (break bonds if already bonded)
-   38   |     |     |     +-(noop))))
-   39   |     |     +-(swap-input-output))))           ;   - no next atom, move to "other" by swapping
-   40   |     +-(traverse-3))                          ; * move to next
-   41   |   (detach-other))                            ; detach output bond
-   42   +-(attach-to                                   ;; Find a membrane to attach to
-   43       STU.cMEMBRANE)))
+   "other" layer:   o   o                    -o-------o-
+                    |   |                     |       |
+   current layer:  -o---o-                   -o---o---o-
+                    |                         |
+                    @                         @
+    1 (with-input
+    2   (if-attached
+    3   +-(prog2
+    4   |   (with-dst-2
+    5   |     (if-attached-next                        ; Does current membrane atom have "other"?
+    6   |     +-(if
+    7   |     | +-(attach-other-to-next)               ; * attach output bond to "other" membrane
+    8   |     | +-(with-dst-3
+    9   |     |     (if-attached-next                  ;   Is there next membrane atom?
+   10   |     |     +-(prog2
+   11   |     |     |   (traverse)                     ;   - move to next
+   12   |     |     |   (with-dst-2
+   13   |     |     |     (if-attached-next            ;     does next atom have "other" attached?
+   14   |     |     |     +-(prog2
+   15   |     |     |     |   (traverse)               ;     1. move to it
+   16   |     |     |     |   (with-dst-1
+   17   |     |     |     |     (if-other-matches-next ;     2. is it "next" for output?
+   18   |     |     |     |       (noop)               ;        nothing to do then
+   19   |     |     |     |       (connect-other-force ;     3. connect membrane prev/next atoms
+   20   |     |     |     |         Membrane.cNEXT)))) ;        (break bonds if already bonded)
+   21   |     |     |     +-(noop))))
+   22   |     |     +-(swap-input-output))))           ;   - no next atom, move to "other" by swapping
+   23   |     +-(traverse-3))                          ; * move to next
+   24   |   (detach-other))                            ; detach output bond
+   25   +-(attach-to                                   ;; Find a membrane to attach to
+   26       STU.cMEMBRANE)))
  */
 transient Demo_SequenceData {
   typedef DataUtils.Datum Datum;
@@ -450,7 +490,7 @@ transient Demo_SequenceData {
 
   constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
-  constant Unsigned cSIZE = 43;
+  constant Unsigned cSIZE = 65;
 
   PackageData pd;
 
@@ -459,8 +499,32 @@ transient Demo_SequenceData {
   EvalFunction ef;
 
   Item items[cSIZE * 2] = {
+    /* # Bootstrap */
+    /*  1 */ cBLCK | EB.cWITH_INPUT, (Tag) 0x1,
+    /*  2   */ cCOND | EC.cIF_ATTACHED, 0,
+    /*  3     */ cBLCK | EB.cWITH_REG1, 0,
+    /*  4       */ cCNST | (Byte) (ES.cTAGGED | ES.cACTIVE), 0,
+    /*  5       */ cCOND | EC.cIF_MATCHES_FLAGS, 0,
+    /*  6         */ cFUNC | EF.cPROG2, 0,
+    /*  7           */ cFUNC | EF.cPROG2, 0,
+    /*  8             */ cFUNC | EF.cDEACTIVATE, 0,
+    /*  9             */ cFUNC | EF.cTRAVERSE_2, 0,
+    /* 10           */ cBLCK | EB.cWITH_OUTPUT, 0,
+    /* 11             */ cCOND | EC.cIF, 0,
+    /* 12               */ cFUNC | EF.cBUILD, 0,
+    /* 13                 */ cCNST | (Byte) STU.cTREE_BUILDER, 0,
+    /* 14                 */ cCNST | (Byte) TreeBuilder.cSEQUENCE, 0,
+    /* 15               */ cBLCK | EB.cWITH_DST_1, 0,
+    /* 16                 */ cBLCK | EB.cWITH_REG1, 0,
+    /* 17                   */ cCNST | (Byte) Package.cCOMMON, 0,
+    /* 18                   */ cFUNC | EF.cMOVE_TO_OTHER_NEXT, 0,
+    /* 19         */ cFUNC | EF.cTRAVERSE_2, 0,
+    /* 20     */ cFUNC | EF.cATTACH_TO_FLAGS, 0,
+    /* 21       */ cCNST | (Byte) STU.cPACKAGE, 0,
+    /* 22       */ cCNST | (Byte) ES.cNO_EXEC, 0,
+
     /* # Build other layer atoms */
-    /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x1,
+    /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x2,
     /*  2   */ cCOND | EC.cIF_ATTACHED, 0,
     /*  3     */ cBLCK | EB.cWITH_DST_2, 0,
     /*  4       */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
@@ -477,33 +541,34 @@ transient Demo_SequenceData {
     /* 15                */ cCNST | (Byte) Membrane.cOTHER, 0,
     /* 16     */ cFUNC | EF.cATTACH_TO, 0,
     /* 17       */ cCNST | STU.cMEMBRANE, 0,
+
     /* # Repair the membrane */
-    /* 18 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x1,
-    /* 19   */ cCOND | EC.cIF_ATTACHED, 0,
-    /* 20     */ cFUNC | EF.cPROG2, 0,
-    /* 21       */ cBLCK | EB.cWITH_DST_2, 0,
-    /* 22         */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
-    /* 23           */ cCOND | EC.cIF, 0,
-    /* 24             */ cFUNC | EF.cATTACH_OTHER_TO_NEXT, 0,
-    /* 25             */ cBLCK | EB.cWITH_DST_3, 0,
-    /* 26               */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
-    /* 27                 */ cFUNC | EF.cPROG2, 0,
-    /* 28                   */ cFUNC | EF.cTRAVERSE, 0,
-    /* 29                   */ cBLCK | EB.cWITH_DST_2, 0,
-    /* 30                     */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
-    /* 31                       */ cFUNC | EF.cPROG2, 0,
-    /* 32                         */ cFUNC | EF.cTRAVERSE, 0,
-    /* 33                         */ cBLCK | EB.cWITH_DST_1, 0,
-    /* 34                           */ cCOND | EC.cIF_OTHER_MATCHES_NEXT, 0,
-    /* 35                             */ cFUNC | EF.cNOOP, 0,
-    /* 36                             */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
-    /* 37                               */ cCNST | (Byte) Membrane.cNEXT, 0,
-    /* 38                       */ cFUNC | EF.cNOOP, 0,
-    /* 39                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
-    /* 40           */ cFUNC | EF.cTRAVERSE_3, 0,
-    /* 41       */ cFUNC | EF.cDETACH_OTHER, 0,
-    /* 42   */ cFUNC | EF.cATTACH_TO, 0,
-    /* 43     */ cCNST | (Byte) STU.cMEMBRANE, 0
+    /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x2,
+    /*  2   */ cCOND | EC.cIF_ATTACHED, 0,
+    /*  3     */ cFUNC | EF.cPROG2, 0,
+    /*  4       */ cBLCK | EB.cWITH_DST_2, 0,
+    /*  5         */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
+    /*  6           */ cCOND | EC.cIF, 0,
+    /*  7             */ cFUNC | EF.cATTACH_OTHER_TO_NEXT, 0,
+    /*  8             */ cBLCK | EB.cWITH_DST_3, 0,
+    /*  9               */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
+    /* 10                 */ cFUNC | EF.cPROG2, 0,
+    /* 11                   */ cFUNC | EF.cTRAVERSE, 0,
+    /* 12                   */ cBLCK | EB.cWITH_DST_2, 0,
+    /* 13                     */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
+    /* 14                       */ cFUNC | EF.cPROG2, 0,
+    /* 15                         */ cFUNC | EF.cTRAVERSE, 0,
+    /* 16                         */ cBLCK | EB.cWITH_DST_1, 0,
+    /* 17                           */ cCOND | EC.cIF_OTHER_MATCHES_NEXT, 0,
+    /* 18                             */ cFUNC | EF.cNOOP, 0,
+    /* 19                             */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
+    /* 20                               */ cCNST | (Byte) Membrane.cNEXT, 0,
+    /* 21                       */ cFUNC | EF.cNOOP, 0,
+    /* 22                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
+    /* 23           */ cFUNC | EF.cTRAVERSE_3, 0,
+    /* 24       */ cFUNC | EF.cDETACH_OTHER, 0,
+    /* 25   */ cFUNC | EF.cATTACH_TO, 0,
+    /* 26     */ cCNST | (Byte) STU.cMEMBRANE, 0
   };
 
   Datum getData(Unsigned i) {

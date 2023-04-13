@@ -8,11 +8,11 @@ transient EvalStatefulFunction : Eval {
   constant State cSTATE_CONNECT_OTHER_FORCE  = 34;
   constant State cSTATE_TRAVERSE             = 35;
   constant State cSTATE_BUILD                = 36;
-  constant State cSTATE_BUILD_NEXT           = 37;
-  constant State cSTATE_MOVE_TO_OTHER        = 38;
+  constant State cSTATE_MOVE_TO_OTHER        = 37;
+  constant State cSTATE_MOVE_TO_OTHER_NEXT   = 38;
 
   constant State cSTATE_FIRST = cSTATE_ATTACH_OTHER_TO_NEXT;
-  constant State cSTATE_LAST  = cSTATE_MOVE_TO_OTHER;
+  constant State cSTATE_LAST  = cSTATE_MOVE_TO_OTHER_NEXT;
 
   Byte eval(Exec& exec, Package& tree, Bool& done) {
     if (exec.isState(cSTATE_ATTACH_OTHER_TO_NEXT)) {
@@ -25,13 +25,13 @@ transient EvalStatefulFunction : Eval {
       done = traverse(exec);
 
     } else if (exec.isState(cSTATE_BUILD)) {
-      done = build(exec);
-
-    } else if (exec.isState(cSTATE_BUILD_NEXT)) {
-      return buildNext(exec, done);
+      return build(exec, done);
 
     } else if (exec.isState(cSTATE_MOVE_TO_OTHER)) {
       done = moveToOther(exec);
+
+    } else if (exec.isState(cSTATE_MOVE_TO_OTHER_NEXT)) {
+      return moveToOtherNext(exec, done);
     }
 
     return 0x0;
@@ -98,14 +98,17 @@ transient EvalStatefulFunction : Eval {
     return (status != BS.cINACCESSIBLE);
   }
 
-  // TODO: return and set done value
-  Bool build(Exec& exec) {
+  Bool build(Exec& exec, Bool& done) {
     SType stype = getSType(exec, cREG1);
     Index index = getBondIndex(exec, cSRC);
     Index buildIndex = getBondIndex(exec, cDST);
+    done = false;
 
-    if (exec.getBond(index).isAttached())
-      return true; // already have an atom attached
+    if (exec.getBond(index).isAttached()) {
+      // Already has an atom attached
+      done = true;
+      return false;
+    }
 
     // Make new atom
     Atom atom = stu.make(stype);
@@ -124,77 +127,77 @@ transient EvalStatefulFunction : Eval {
     if (!bs.isOk(status)) {
       Empty empty;
       ew[buildSite] = empty;
-    }
-    return (status != BS.cINACCESSIBLE);
-  }
 
-  Bool buildNext(Exec& exec, Bool& done) {
-    Index index = getBondIndex(exec, cSRC);
-    Index nextIndex = getBondIndex(exec, cDST);
-    SType stype = getSType(exec, cREG1);
-    Index bondIndex = getBondIndex(exec, cREG2);
-    done = false;
-
-    // Get currently attached bondable
-    QBond& bond = exec.getBond(index);
-    if (!bond.isAttached()) {
-      // nothing attached to selected bond
-      done = true;
-      return false;
-    }
-    SiteNum site = bond.getSiteNumber();
-    IBondable& current = (IBondable&) ew[site];
-
-    // Check target bond
-    QBond& nextBond = current.getBond(nextIndex);
-    if (nextBond.isAttached()) {
-      // something is already attached to the target bond
-      done = true;
-      return false;
+      if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
+        return false;
     }
 
-    // Make new atom
-    Atom atom = stu.make(stype);
-    IBondable& next = (IBondable&) atom;
-
-    // Place new atom
-    Radius radius = bu.maxDist(next, current);
-    EventWindowMisc ewm;
-    SiteNum nextSite = ewm.findEmptySiteAround(site, 1, radius);
-    if (nextSite == SiteNum.maxof)
-      return false;
-    ew[nextSite] = atom;
-
-    // Attach to current
-    BS.Status status = bu.attach(site, nextIndex, nextSite, bondIndex);
-    if (!bs.isOk(status)) {
-      Empty empty;
-      ew[nextSite] = empty;
-    }
-    done = (status != BS.cINACCESSIBLE);
+    done = true;
     return bs.isOk(status);
   }
 
   // TODO: return and set done value
   Bool moveToOther(Exec& exec) {
     Index index = getBondIndex(exec, cSRC);
-    Index indexTo = getBondIndex(exec, cDST);
-    Index indexOther = (index == Exec.cOUTPUT) ? Exec.cINPUT : Exec.cOUTPUT;
+    Index toIndex = getBondIndex(exec, cDST);
+    Index otherIndex = (index == Exec.cOUTPUT) ? Exec.cINPUT : Exec.cOUTPUT;
 
     QBond& bond = exec.getBond(index);
-    QBond& bondOther = exec.getBond(indexOther);
-    if (!bond.isAttached() || !bondOther.isAttached())
+    QBond& otherBond = exec.getBond(otherIndex);
+    if (!bond.isAttached() || !otherBond.isAttached())
       return true;
 
     SiteNum site = bond.getSiteNumber();
-    SiteNum siteOther = bondOther.getSiteNumber();
-    if (!ew.isAccessible(site) || !ew.isAccessible(siteOther))
-      return false;
+    SiteNum otherSite = otherBond.getSiteNumber();
 
-    BS.Status status = bu.move(site, bond.getIndex(), siteOther, indexTo);
+    BS.Status status = bu.move(site, bond.getIndex(), otherSite, toIndex);
     if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
       return false;
 
     return true;
+  }
+
+  Bool moveToOtherNext(Exec& exec, Bool& done) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec, cDST);
+    Index toIndex = getBondIndex(exec, cREG1);
+    Index otherIndex = (index == Exec.cOUTPUT) ? Exec.cINPUT : Exec.cOUTPUT;
+    done = false;
+
+    dbg.print("moveToOtherNext");
+    dbg.print(index);
+    dbg.print(nextIndex);
+    dbg.print(toIndex);
+
+    QBond& bond = exec.getBond(index);
+    QBond& otherBond = exec.getBond(otherIndex);
+    if (!bond.isAttached() || !otherBond.isAttached()) {
+      done = true;
+      return false;
+    }
+    SiteNum site = bond.getSiteNumber();
+    SiteNum otherSite = otherBond.getSiteNumber();
+
+    // Atom attached to other bond
+    IBondable& other = (IBondable&) ew[otherSite];
+    QBond& nextBond = other.getBond(nextIndex);
+    if (!nextBond.isAttached()) {
+      done = true;
+      return false;
+    }
+
+    // Next atom
+    SiteNum nextSite = nextBond.getSiteNumber(otherSite);
+    if (!ew.isAccessible(nextSite))
+      return false;
+
+    // Move
+    BS.Status status = bu.move(site, bond.getIndex(), nextSite, toIndex);
+    dbg.print(status);
+    if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
+      return false;
+
+    done = true;
+    return bs.isOk(status);
   }
 }

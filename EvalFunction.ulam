@@ -31,8 +31,13 @@ transient EvalFunction : Eval {
   constant Symbol cTRAVERSE_3           = 0x2a;
 
   constant Symbol cBUILD                = 0x2b;
-  constant Symbol cBUILD_NEXT           = 0x2c;
-  constant Symbol cMOVE_TO_OTHER        = 0x2d;
+  constant Symbol cMOVE_TO_OTHER        = 0x2c;
+  constant Symbol cMOVE_TO_OTHER_NEXT   = 0x2d;
+
+  constant Symbol cACTIVATE             = 0x31;
+  constant Symbol cDEACTIVATE           = 0x32;
+  // constant Symbol cACTIVATE_OTHER       = 0x33;
+  // constant Symbol cDEACTIVATE_OTHER     = 0x34;
 
   Arity getArity(Symbol symbol) {
     return getArgNum(symbol);
@@ -41,7 +46,7 @@ transient EvalFunction : Eval {
   Arity getArgNum(Symbol symbol) {
     if (symbol == cPROG2 ||
         symbol == cBUILD ||
-        symbol == cBUILD_NEXT)
+        symbol == cATTACH_TO_FLAGS)
     {
       return 2;
     }
@@ -146,22 +151,29 @@ transient EvalFunction : Eval {
       traverse(exec, 3);
 
     } else if (symbol == cBUILD) {
+      // TODO: use (with-dst), (with-reg1) instead
       if (cDEBUG) dbg.print("(build)");
       exec.set(cREG1, arg1); // stype
       exec.set(cDST, arg2);  // new atom bond to attach to
       exec.setState(ESF.cSTATE_BUILD);
 
-    } else if (symbol == cBUILD_NEXT) {
-      if (cDEBUG) dbg.print("(build-next)");
-      exec.set(cREG1, arg1);
-      exec.set(cREG2, arg2);
-      exec.setState(ESF.cSTATE_BUILD_NEXT);
-
     } else if (symbol == cMOVE_TO_OTHER) {
+      // TODO: use (with-dst) instead
       if (cDEBUG) dbg.print("(move-to-other)");
-      // Move output atom to input or vice versa
       exec.set(cDST, arg1); // other atom bond index
       exec.setState(ESF.cSTATE_MOVE_TO_OTHER);
+
+    } else if (symbol == cMOVE_TO_OTHER_NEXT) {
+      if (cDEBUG) dbg.print("(move-to-other-next)");
+      exec.setState(ESF.cSTATE_MOVE_TO_OTHER_NEXT);
+
+    } else if (symbol == cACTIVATE) {
+      if (cDEBUG) dbg.print("(activate)");
+      return (Byte) setIsActivePackage(exec, true);
+
+    } else if (symbol == cDEACTIVATE) {
+      if (cDEBUG) dbg.print("(deactivate)");
+      return (Byte) setIsActivePackage(exec, false);
 
     } else {
       dbg.print("EvalFunction.eval: unknown symbol:");
@@ -196,6 +208,29 @@ transient EvalFunction : Eval {
     exec.setState(ESF.cSTATE_TRAVERSE);
   }
 
+  Bool setIsActivePackage(Exec& exec, Bool isActive) {
+    Index index = getBondIndex(exec, cSRC);
+
+    QBond& bond = exec.getBond(index);
+    if (!bond.isAttached())
+      return false;
+    SiteNum site = bond.getSiteNumber();
+
+    if (!(ew[site] is Package))
+      return false;
+
+    Package& pkg = (Package&) ew[site];
+    Datum data = pkg.getData();
+    Datum aux = pkg.getAux();
+    if (pd.isExec(data))
+      return false; // executable, doesn't have "active" flag
+
+    aux = pd.setIsActive(aux, isActive);
+    pkg.setAux(aux);
+
+    return true;
+  }
+
   SiteNum findSType(Exec& exec, SType type) {
     return findSType(exec, type, ES.cNO_FLAGS);
   }
@@ -212,7 +247,8 @@ transient EvalFunction : Eval {
     ws.reset(1u, radius);
     for (Int s = ws.next(); s >= 0; s = ws.next()) {
       SiteNum site = (SiteNum) s;
-      if (stu.getSType(site) == type && es.match(site, flags))
+      if (stu.getSType(site) == type &&
+          (flags == ES.cNO_FLAGS || es.match(site, flags)))
         ws.hit();
     }
     SiteNum pick = ws.getPick();

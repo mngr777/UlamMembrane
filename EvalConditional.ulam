@@ -12,7 +12,7 @@ transient EvalConditional : Eval {
   constant Symbol cIF_ATTACHED           = 0x9;
   constant Symbol cIF_ATTACHED_NEXT      = 0xa;
   constant Symbol cIF_ATTACHED_NEXT_2    = 0xb;
-  constant Symbol cIF_OTHER_MATCHES_NEXT = 0x11;
+  constant Symbol cIF_OTHER_MATCHES_NEXT = 0xc;
 
   constant Symbol cIF_MATCHES_FLAGS      = 0x11;
 
@@ -23,8 +23,10 @@ transient EvalConditional : Eval {
   }
 
   Arity getArgNum(Symbol symbol) {
-    if (symbol == cIF)
+    if (symbol == cIF) {
       return 1;
+    }
+
     return 0;
   }
 
@@ -62,7 +64,7 @@ transient EvalConditional : Eval {
 
     } else if (symbol == cIF_MATCHES_FLAGS) {
       if (cDEBUG) dbg.print("(if-matches-flags)");
-      cond = isMatchingFlags(exec, arg);
+      cond = isMatchingFlags(exec);
 
     } else {
       dbg.print("EvalConditional.eval: unknown symbol");
@@ -107,8 +109,9 @@ transient EvalConditional : Eval {
     return (otherBond.getSiteNumber() == nextBond.getSiteNumber(site));
   }
 
-  Bool isMatchingFlags(Exec& exec, Byte flags) {
+  Bool isMatchingFlags(Exec& exec) {
     Index index = getBondIndex(exec, cSRC);
+    Byte flags = exec.get(cREG1);
 
     QBond& bond = exec.getBond(index);
     if (!bond.isAttached())
