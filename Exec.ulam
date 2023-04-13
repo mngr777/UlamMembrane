@@ -231,7 +231,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   }
 
   // NOTE:
-  // * assuming eval always succeeds, so there's no need to store the 2nd argument to retry
+  // * assuming eval always succeeds, so there's no need to store the 2nd argument to retry;
   // * also assuming that arguments are always passed in correct order
   Void evalOrStoreArgument(Package& tree, Byte arg) {
     PackageData pd;
@@ -255,7 +255,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
       tree.setAux(result);
 
     } else {
-      // Zero arguments required or one is require and one is already stored.
+      // Zero arguments required or one is required and one is already stored.
       // This normally happens when either:
       // * subtree is a conditional and selected branch returns;
       // * subtree is a block and it's body returns.
@@ -305,7 +305,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
             result = pd.setValue(result, PD.cNIL);
 
         } else if (cDEBUG_TRAVERSE && status != BS.cINACCESSIBLE) {
-          dbg.print("Exec.evalOrMoveToChild: failed to traverse to block body, status:");
+          dbg.print("Exec.evalOrMoveToChild: failed to traverse to block argument or body, status:");
           dbg.print(bs.toString(status));
         }
 

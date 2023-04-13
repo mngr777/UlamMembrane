@@ -36,8 +36,6 @@ transient EvalFunction : Eval {
 
   constant Symbol cACTIVATE             = 0x31;
   constant Symbol cDEACTIVATE           = 0x32;
-  // constant Symbol cACTIVATE_OTHER       = 0x33;
-  // constant Symbol cDEACTIVATE_OTHER     = 0x34;
 
   Arity getArity(Symbol symbol) {
     return getArgNum(symbol);
@@ -45,7 +43,6 @@ transient EvalFunction : Eval {
 
   Arity getArgNum(Symbol symbol) {
     if (symbol == cPROG2 ||
-        symbol == cBUILD ||
         symbol == cATTACH_TO_FLAGS)
     {
       return 2;
@@ -151,10 +148,7 @@ transient EvalFunction : Eval {
       traverse(exec, 3);
 
     } else if (symbol == cBUILD) {
-      // TODO: use (with-dst), (with-reg1) instead
       if (cDEBUG) dbg.print("(build)");
-      exec.set(cREG1, arg1); // stype
-      exec.set(cDST, arg2);  // new atom bond to attach to
       exec.setState(ESF.cSTATE_BUILD);
 
     } else if (symbol == cMOVE_TO_OTHER) {
