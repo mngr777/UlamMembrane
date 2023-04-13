@@ -424,15 +424,14 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
     7  |   |     (traverse-3)           ; move to "next" membrane atom
     8  |   |     (traverse-2)))         ; move to "other" membrane atom
     9  |   +-(with-output               ;; Attach new membrane atom to "other" bond
-   10  |       (prog2
-   11  |         (with-reg1
-   12  |           STU.cMEMBRANE        ; membrane stype
-   13  |           (with-dst-2          ; Membrane.cOTHER = 2
-   14  |             (build)))          ; build new membrane atom
-   15  |         (move-to-other
-   16  |           Membrane.cOTHER))))) ; attach to input membrane's "other" bond
-   17  +-(attach-to                     ;; Find a membrane to attach to
-   18      STU.cMEMBRANE)))
+   10  |       (with-dst-2              ; Membrane.cOTHER = 2
+   11  |         (if
+   12  |           (with-reg1
+   13  |             STU.cMEMBRANE      ; membrane stype
+   14  |             (build))           ; build attached to Exec by "other" bond
+   15  |           (move-to-other))))   ; attach to input membrane's "other" bond
+   16  +-(attach-to                     ;; Find a membrane to attach to
+   17      STU.cMEMBRANE)))
 
    # Repair the membrane:
    1. Next layer atoms are there,        2. Atoms of both layers are attached,
@@ -492,7 +491,7 @@ transient Demo_SequenceData {
 
   constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
-  constant Unsigned cSIZE = 68;
+  constant Unsigned cSIZE = 67;
 
   PackageData pd;
 
@@ -537,15 +536,14 @@ transient Demo_SequenceData {
     /*  7             */ cFUNC | EF.cTRAVERSE_3, 0,
     /*  8             */ cFUNC | EF.cTRAVERSE_2, 0,
     /*  9         */ cBLCK | EB.cWITH_OUTPUT, 0,
-    /* 10            */ cFUNC | EF.cPROG2, 0,
-    /* 11                */ cBLCK | EB.cWITH_REG1, 0,
-    /* 12                  */ cCNST | (Byte) STU.cMEMBRANE, 0,
-    /* 13                  */ cBLCK | EB.cWITH_DST_2, 0,
-    /* 14                    */ cFUNC | EF.cBUILD, 0,
-    /* 15              */ cFUNC | EF.cMOVE_TO_OTHER, 0,
-    /* 16                */ cCNST | (Byte) Membrane.cOTHER, 0,
-    /* 17     */ cFUNC | EF.cATTACH_TO, 0,
-    /* 18       */ cCNST | STU.cMEMBRANE, 0,
+    /* 10           */ cBLCK | EB.cWITH_DST_2, 0,
+    /* 11             */ cCOND | EC.cIF, 0,
+    /* 12               */ cBLCK | EB.cWITH_REG1, 0,
+    /* 13                   */ cCNST | (Byte) STU.cMEMBRANE, 0,
+    /* 14                   */ cFUNC | EF.cBUILD, 0,
+    /* 15                 */ cFUNC | EF.cMOVE_TO_OTHER, 0,
+    /* 16     */ cFUNC | EF.cATTACH_TO, 0,
+    /* 17       */ cCNST | STU.cMEMBRANE, 0,
 
     /* # Repair the membrane */
     /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x2,

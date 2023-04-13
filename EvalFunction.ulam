@@ -53,8 +53,7 @@ transient EvalFunction : Eval {
         symbol == cSET_SRC ||
         symbol == cSET_DST ||
         symbol == cATTACH_TO ||
-        symbol == cCONNECT_OTHER_FORCE ||
-        symbol == cMOVE_TO_OTHER)
+        symbol == cCONNECT_OTHER_FORCE)
     {
       return 1;
     }
@@ -152,9 +151,7 @@ transient EvalFunction : Eval {
       exec.setState(ESF.cSTATE_BUILD);
 
     } else if (symbol == cMOVE_TO_OTHER) {
-      // TODO: use (with-dst) instead
       if (cDEBUG) dbg.print("(move-to-other)");
-      exec.set(cDST, arg1); // other atom bond index
       exec.setState(ESF.cSTATE_MOVE_TO_OTHER);
 
     } else if (symbol == cMOVE_TO_OTHER_NEXT) {
