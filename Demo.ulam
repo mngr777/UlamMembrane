@@ -4,6 +4,22 @@ local typedef EvalSearch ES;
 local typedef PackageData PD;
 local typedef STypeUtils STU;
 
+/**
+   \symbol DP
+ */
+element DemoParameters {
+  /**
+     Bootstrap automatically
+
+     Attach TreeBuilder atom to the first item in input sequence.
+   */
+  parameter Bool cBOOTSTRAP = true;
+}
+
+
+/**
+   \symbol De
+ */
 element Demo : QStateT(3) + QBondableT(2) + QMortal {
   constant State cSTATE_PLACE_MEMBRANE_BUILDER = 0;
   constant State cSTATE_BUILD_SEQUENCE         = 1;
@@ -83,6 +99,12 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
   }
 
   Void attachTreeBuilder() {
+    DemoParameters params;
+    if (!params.cBOOTSTRAP) {
+      setState(cSTATE_DONE);
+      return;
+    }
+
     BondStatus bs;
     BondUtils bu;
     EventWindow ew;
