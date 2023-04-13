@@ -446,28 +446,29 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
     2   (if-attached
     3   +-(prog2
     4   |   (with-dst-2
-    5   |     (if-attached-next                        ; Does current membrane atom have "other"?
+    5   |     (if-attached-next                            ; Does current membrane atom have "other"?
     6   |     +-(if
-    7   |     | +-(attach-other-to-next)               ; * attach output bond to "other" membrane
+    7   |     | +-(attach-other-to-next)                   ; * attach output bond to "other" membrane
     8   |     | +-(with-dst-3
-    9   |     |     (if-attached-next                  ;   Is there next membrane atom?
+    9   |     |     (if-attached-next                      ;   Is there next membrane atom?
    10   |     |     +-(prog2
-   11   |     |     |   (traverse)                     ;   - move to next
+   11   |     |     |   (traverse)                         ;   - move to next
    12   |     |     |   (with-dst-2
-   13   |     |     |     (if-attached-next            ;     does next atom have "other" attached?
+   13   |     |     |     (if-attached-next                ;     does next atom have "other" attached?
    14   |     |     |     +-(prog2
-   15   |     |     |     |   (traverse)               ;     1. move to it
+   15   |     |     |     |   (traverse)                   ;     1. move to it
    16   |     |     |     |   (with-dst-1
-   17   |     |     |     |     (if-other-matches-next ;     2. is it "next" for output?
-   18   |     |     |     |       (noop)               ;        nothing to do then
-   19   |     |     |     |       (connect-other-force ;     3. connect membrane prev/next atoms
-   20   |     |     |     |         Membrane.cNEXT)))) ;        (break bonds if already bonded)
-   21   |     |     |     +-(noop))))
-   22   |     |     +-(swap-input-output))))           ;   - no next atom, move to "other" by swapping
-   23   |     +-(traverse-3))                          ; * move to next
-   24   |   (detach-other))                            ; detach output bond
-   25   +-(attach-to                                   ;; Find a membrane to attach to
-   26       STU.cMEMBRANE)))
+   17   |     |     |     |     (if-other-matches-next     ;     2. is it "next" for output?
+   18   |     |     |     |       (noop)                   ;        nothing to do then
+   19   |     |     |     |       (with-reg1               ;     3. connect membrane prev/next atoms
+   20   |     |     |     |         Membrane.cNEXT         ;        (break bonds if already bonded)
+   21   |     |     |     |         (connect-other-force)))))
+   22   |     |     |     +-(noop))))
+   23   |     |     +-(swap-input-output))))               ;   - no next atom, move to "other"
+   24   |     +-(traverse-3))                              ; * move to next
+   25   |   (detach-other))                                ; detach output bond
+   26   +-(attach-to                                       ;; Find a membrane to attach to
+   27       STU.cMEMBRANE)))
 
  */
 transient Demo_SequenceData {
@@ -491,7 +492,7 @@ transient Demo_SequenceData {
 
   constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
-  constant Unsigned cSIZE = 67;
+  constant Unsigned cSIZE = 68;
 
   PackageData pd;
 
@@ -564,14 +565,15 @@ transient Demo_SequenceData {
     /* 16                         */ cBLCK | EB.cWITH_DST_1, 0,
     /* 17                           */ cCOND | EC.cIF_OTHER_MATCHES_NEXT, 0,
     /* 18                             */ cFUNC | EF.cNOOP, 0,
-    /* 19                             */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
+    /* 19                             */ cBLCK | EB.cWITH_REG1, 0,
     /* 20                               */ cCNST | (Byte) Membrane.cNEXT, 0,
-    /* 21                       */ cFUNC | EF.cNOOP, 0,
-    /* 22                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
-    /* 23           */ cFUNC | EF.cTRAVERSE_3, 0,
-    /* 24       */ cFUNC | EF.cDETACH_OTHER, 0,
-    /* 25   */ cFUNC | EF.cATTACH_TO, 0,
-    /* 26     */ cCNST | (Byte) STU.cMEMBRANE, 0
+    /* 21                               */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
+    /* 22                       */ cFUNC | EF.cNOOP, 0,
+    /* 23                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
+    /* 24           */ cFUNC | EF.cTRAVERSE_3, 0,
+    /* 25       */ cFUNC | EF.cDETACH_OTHER, 0,
+    /* 26   */ cFUNC | EF.cATTACH_TO, 0,
+    /* 27     */ cCNST | (Byte) STU.cMEMBRANE, 0
   };
 
   Datum getData(Unsigned i) {

@@ -52,8 +52,7 @@ transient EvalFunction : Eval {
         symbol == cSET_2 ||
         symbol == cSET_SRC ||
         symbol == cSET_DST ||
-        symbol == cATTACH_TO ||
-        symbol == cCONNECT_OTHER_FORCE)
+        symbol == cATTACH_TO)
     {
       return 1;
     }
@@ -127,7 +126,6 @@ transient EvalFunction : Eval {
 
     } else if (symbol == cCONNECT_OTHER_FORCE) {
       if (cDEBUG) dbg.print("(connect-other-force)");
-      exec.set(cREG1, arg1); // "other" (input/output, other than cSRC) bond index to attach
       exec.setState(ESF.cSTATE_CONNECT_OTHER_FORCE);
 
     } else if (symbol == cTRAVERSE) {
