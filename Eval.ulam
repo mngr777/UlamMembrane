@@ -14,8 +14,6 @@ transient Eval {
 
   typedef STypeUtils.SType SType;
 
-  constant Bool cDEBUG = Exec.cDEBUG;
-
   constant RegIndex cREG1 = Exec.cREG1;
   constant RegIndex cREG2 = Exec.cREG2;
   constant RegIndex cSRC  = Exec.cSRC;

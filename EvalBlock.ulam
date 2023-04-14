@@ -31,33 +31,33 @@ transient EvalBlock : Eval {
     if (symbol == cWITH_INPUT ||
         symbol == cWITH_OUTPUT)
     {
-      if (cDEBUG)
+      if (exec.mDebug)
         dbg.print((symbol == cWITH_INPUT) ? "(with-input)" : "(with-output)");
       QBond.Index index = (symbol == cWITH_INPUT) ? Exec.cINPUT : Exec.cOUTPUT;
       replace(exec, cSRC, tree, (Byte) index);
 
     } else if (symbol == cWITH_REG1) {
-      if (cDEBUG) dbg.print("(with-reg1)");
+      if (exec.mDebug) dbg.print("(with-reg1)");
       replace(exec, cREG1, tree, arg);
 
     } else if (symbol == cWITH_REG2) {
-      if (cDEBUG) dbg.print("(with-reg2)");
+      if (exec.mDebug) dbg.print("(with-reg2)");
       replace(exec, cREG2, tree, arg);
 
     } else if (symbol == cWITH_DST) {
-      if (cDEBUG) dbg.print("(with-dst)");
+      if (exec.mDebug) dbg.print("(with-dst)");
       replace(exec, cDST, tree, arg);
 
     } else if (symbol == cWITH_DST_1) {
-      if (cDEBUG) dbg.print("(with-dst-1)");
+      if (exec.mDebug) dbg.print("(with-dst-1)");
       replace(exec, cDST, tree, (Byte) 1);
 
     } else if (symbol == cWITH_DST_2) {
-      if (cDEBUG) dbg.print("(with-dst-2)");
+      if (exec.mDebug) dbg.print("(with-dst-2)");
       replace(exec, cDST, tree, (Byte) 2);
 
     } else if (symbol == cWITH_DST_3) {
-      if (cDEBUG) dbg.print("(with-dst-3)");
+      if (exec.mDebug) dbg.print("(with-dst-3)");
       replace(exec, cDST, tree, (Byte) 3);
     }
   }
@@ -68,20 +68,20 @@ transient EvalBlock : Eval {
     if (symbol == cWITH_INPUT ||
         symbol == cWITH_OUTPUT)
     {
-      if (cDEBUG)
+      if (exec.mDebug)
         dbg.print((symbol == cWITH_INPUT) ? ";; (with-input)" : ";; (with-output)");
       restore(exec, cSRC, tree);
 
     } else if (symbol == cWITH_REG1) {
-      if (cDEBUG) dbg.print(";; (with-reg-1)");
+      if (exec.mDebug) dbg.print(";; (with-reg-1)");
       restore(exec, cREG1, tree);
 
     } else if (symbol == cWITH_REG2) {
-      if (cDEBUG) dbg.print(";; (with-reg-2)");
+      if (exec.mDebug) dbg.print(";; (with-reg-2)");
       restore(exec, cREG2, tree);
 
     } else if (symbol == cWITH_DST) {
-      if (cDEBUG) dbg.print(";; (with-dst)");
+      if (exec.mDebug) dbg.print(";; (with-dst)");
       restore(exec, cDST, tree);
     }
   }
@@ -96,7 +96,7 @@ transient EvalBlock : Eval {
     // Replace
     exec.set(regIndex, value);
 
-    if (cDEBUG_VALUE) {
+    if (exec.mDebug && cDEBUG_VALUE) {
       dbg.print("Registry value replaced (reg/from/to):");
       dbg.print(ed.getRegName(regIndex));
       dbg.print(du.toInteger(old));
@@ -110,7 +110,7 @@ transient EvalBlock : Eval {
     Byte value = exec.get(regIndex);
     exec.set(regIndex, old);
 
-    if (cDEBUG_VALUE) {
+    if (exec.mDebug && cDEBUG_VALUE) {
       dbg.print("Registry value restored (reg/from/to):");
       dbg.print(ed.getRegName(regIndex));
       dbg.print(du.toInteger(value));

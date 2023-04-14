@@ -1,0 +1,33 @@
+local typedef EventWindow.SiteNum SiteNum;
+
+/**
+   Toggle debug on/off for first (by site number) closest Exec
+
+   \symbol ED
+ */
+element ExecDebugSwitch : QMortal {
+  @Override Void behave() {
+    EventWindow ew;
+    MDist mdist;
+
+    for (Int s = 1; s <= mdist.getLastIndex((MDist.Radius) ew.getRadius()); s++) {
+      SiteNum site = (SiteNum) s;
+      Atom& atom = ew[site];
+      if (atom as Exec) {
+        // Toggle
+        atom.mDebug = !atom.mDebug;
+
+        DebugUtils dbg;
+        if (atom.mDebug) {
+          dbg.print("Exec debug enabled");
+        } else {
+          dbg.print("Exec debug disabled");
+        }
+
+        break;
+      }
+    }
+
+    die();
+  }
+}

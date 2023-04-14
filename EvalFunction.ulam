@@ -62,39 +62,39 @@ transient EvalFunction : Eval {
 
   Byte eval(Exec& exec, Symbol symbol, Byte arg1, Byte arg2) {
     if (symbol == cSET_1) {
-      if (cDEBUG) dbg.print("(set-1)");
+      if (exec.mDebug) dbg.print("(set-1)");
       exec.set(cREG1, arg1);
 
     } else if (symbol == cSET_2) {
-      if (cDEBUG) dbg.print("(set-2)");
+      if (exec.mDebug) dbg.print("(set-2)");
       exec.set(cREG2, arg1);
 
     } else if (symbol == cSET_SRC) {
-      if (cDEBUG) dbg.print("(set-src)");
+      if (exec.mDebug) dbg.print("(set-src)");
       exec.set(cSRC, arg1);
 
     } else if (symbol == cSET_DST) {
-      if (cDEBUG) dbg.print("(set-dst)");
+      if (exec.mDebug) dbg.print("(set-dst)");
       exec.set(cDST, arg1);
 
     } else if (symbol == cGET_1) {
-      if (cDEBUG) dbg.print("(get-1)");
+      if (exec.mDebug) dbg.print("(get-1)");
       return exec.get(cREG1);
 
     } else if (symbol == cGET_2) {
-      if (cDEBUG) dbg.print("(get-2)");
+      if (exec.mDebug) dbg.print("(get-2)");
       return exec.get(cREG2);
 
     } else if (symbol == cGET_SRC) {
-      if (cDEBUG) dbg.print("(get-src)");
+      if (exec.mDebug) dbg.print("(get-src)");
       return exec.get(cSRC);
 
     } else if (symbol == cGET_DST) {
-      if (cDEBUG) dbg.print("(get-dst)");
+      if (exec.mDebug) dbg.print("(get-dst)");
       return exec.get(cDST);
 
     } else if (symbol == cNOOP) {
-      if (cDEBUG) dbg.print("(noop)");
+      if (exec.mDebug) dbg.print("(noop)");
       // do nothing
 
     } else if (symbol == cPROG2) {
@@ -105,63 +105,63 @@ transient EvalFunction : Eval {
       return bs.isOk(bu.swap(0, Exec.cINPUT, Exec.cOUTPUT));
 
     } else if (symbol == cATTACH_TO) {
-      if (cDEBUG) dbg.print("(attach-to)");
+      if (exec.mDebug) dbg.print("(attach-to)");
       return (Byte) attach(exec, findSType(exec, (SType) arg1));
 
     } else if (symbol == cATTACH_TO_FLAGS) {
-      if (cDEBUG) dbg.print("(attach-to-flags)");
+      if (exec.mDebug) dbg.print("(attach-to-flags)");
       return (Byte) attach(exec, findSType(exec, (SType) arg1, arg2));
 
     } else if (symbol == cDETACH) {
-      if (cDEBUG) dbg.print("(detach)");
+      if (exec.mDebug) dbg.print("(detach)");
       return (Byte) detach(exec);
 
     } else if (symbol == cDETACH_OTHER) {
-      if (cDEBUG) dbg.print("(detach-other)");
+      if (exec.mDebug) dbg.print("(detach-other)");
       return (Byte) detachOther(exec);
 
     } else if (symbol == cATTACH_OTHER_TO_NEXT) {
-      if (cDEBUG) dbg.print("(attach-other-to-next)");
+      if (exec.mDebug) dbg.print("(attach-other-to-next)");
       exec.setState(ESF.cSTATE_ATTACH_OTHER_TO_NEXT);
 
     } else if (symbol == cCONNECT_OTHER_FORCE) {
-      if (cDEBUG) dbg.print("(connect-other-force)");
+      if (exec.mDebug) dbg.print("(connect-other-force)");
       exec.setState(ESF.cSTATE_CONNECT_OTHER_FORCE);
 
     } else if (symbol == cTRAVERSE) {
-      if (cDEBUG) dbg.print("(traverse)");
+      if (exec.mDebug) dbg.print("(traverse)");
       traverse(exec, getBondIndex(exec, cDST));
 
     } else if (symbol == cTRAVERSE_1) {
-      if (cDEBUG) dbg.print("(traverse-1)");
+      if (exec.mDebug) dbg.print("(traverse-1)");
       traverse(exec, 1);
 
     } else if (symbol == cTRAVERSE_2) {
-      if (cDEBUG) dbg.print("(traverse-2)");
+      if (exec.mDebug) dbg.print("(traverse-2)");
       traverse(exec, 2);
 
     } else if (symbol == cTRAVERSE_3) {
-      if (cDEBUG) dbg.print("(traverse-3)");
+      if (exec.mDebug) dbg.print("(traverse-3)");
       traverse(exec, 3);
 
     } else if (symbol == cBUILD) {
-      if (cDEBUG) dbg.print("(build)");
+      if (exec.mDebug) dbg.print("(build)");
       exec.setState(ESF.cSTATE_BUILD);
 
     } else if (symbol == cMOVE_TO_OTHER) {
-      if (cDEBUG) dbg.print("(move-to-other)");
+      if (exec.mDebug) dbg.print("(move-to-other)");
       exec.setState(ESF.cSTATE_MOVE_TO_OTHER);
 
     } else if (symbol == cMOVE_TO_OTHER_NEXT) {
-      if (cDEBUG) dbg.print("(move-to-other-next)");
+      if (exec.mDebug) dbg.print("(move-to-other-next)");
       exec.setState(ESF.cSTATE_MOVE_TO_OTHER_NEXT);
 
     } else if (symbol == cACTIVATE) {
-      if (cDEBUG) dbg.print("(activate)");
+      if (exec.mDebug) dbg.print("(activate)");
       return (Byte) setIsActivePackage(exec, true);
 
     } else if (symbol == cDEACTIVATE) {
-      if (cDEBUG) dbg.print("(deactivate)");
+      if (exec.mDebug) dbg.print("(deactivate)");
       return (Byte) setIsActivePackage(exec, false);
 
     } else {

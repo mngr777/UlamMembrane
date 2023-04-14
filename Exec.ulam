@@ -3,7 +3,7 @@ local typedef EvalStatefulConditional ESC;
 local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
-element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
+element Exec : QStateT(6) + QBondableT(4) + QDiffusableT(100) {
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;
   typedef DataUtils.Integer Integer;
@@ -14,7 +14,6 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
 
   typedef Unsigned(2) RegIndex;
 
-  constant Bool cDEBUG = true;
   constant Bool cDEBUG_REG = false;
   constant Bool cDEBUG_TRAVERSE = true;
 
@@ -31,6 +30,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   constant State cSTATE_EXEC = 1;
 
   Byte mRegs[4] = {0x0, 0x0, 0x0, 0x0};
+  Bool mDebug = false;
 
   @Override Void behave() {
     detachBrokenBonds();
@@ -47,7 +47,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   Void set(RegIndex index, Byte value) {
     mRegs[index] = value;
 
-    if (cDEBUG_REG) {
+    if (mDebug && cDEBUG_REG) {
       DebugUtils dbg;
       ExecDebug ed;
       dbg.print(ed.getRegName(index));
@@ -117,7 +117,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
 
     // Check if executable
     if (!pd.isExec(data)) {
-      if (cDEBUG) dbg.print("Exec.exec: non-executable");
+      if (mDebug) dbg.print("Exec.exec: non-executable");
       setState(cSTATE_ERROR);
       return;
     }
@@ -305,7 +305,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
           if (!pd.hasValue(result))
             result = pd.setValue(result, PD.cNIL);
 
-        } else if (cDEBUG_TRAVERSE && status != BS.cINACCESSIBLE) {
+        } else if (mDebug && cDEBUG_TRAVERSE && status != BS.cINACCESSIBLE) {
           dbg.print("Exec.evalOrMoveToChild: failed to traverse to block argument or body, status:");
           dbg.print(bs.toString(status));
         }
@@ -318,7 +318,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
     } else {
       QBond.Index index = !hasArg ? Package.cLEFT : Package.cRIGHT;
       status = bu.traverse(0, cPROGRAM, index);
-      if (cDEBUG_TRAVERSE && !bs.isOk(status) && status != BS.cINACCESSIBLE) {
+      if (mDebug && cDEBUG_TRAVERSE && !bs.isOk(status) && status != BS.cINACCESSIBLE) {
         dbg.print("Exec.evalOrMoveToChild: failed to traverse to child, status:");
         dbg.print(bs.toString(status));
       }

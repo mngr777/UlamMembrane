@@ -54,7 +54,7 @@ transient EvalStatefulFunction : Eval {
     IBondable& bondable = (IBondable&) ew[site];
     QBond& nextBond = bondable.getBond(nextIndex);
     if (!nextBond.isAttached()) {
-      // Still nothing to attach to
+      // Still nothing to attach to (no next atom)
       done = true;
       return false;
     }
@@ -164,11 +164,6 @@ transient EvalStatefulFunction : Eval {
     Index otherIndex = (index == Exec.cOUTPUT) ? Exec.cINPUT : Exec.cOUTPUT;
     done = false;
 
-    dbg.print("moveToOtherNext");
-    dbg.print(index);
-    dbg.print(nextIndex);
-    dbg.print(toIndex);
-
     QBond& bond = exec.getBond(index);
     QBond& otherBond = exec.getBond(otherIndex);
     if (!bond.isAttached() || !otherBond.isAttached()) {
@@ -193,7 +188,6 @@ transient EvalStatefulFunction : Eval {
 
     // Move
     BS.Status status = bu.move(site, bond.getIndex(), nextSite, toIndex);
-    dbg.print(status);
     if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
       return false;
 

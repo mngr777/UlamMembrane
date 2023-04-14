@@ -1,8 +1,6 @@
 local typedef EvalSearch ES;
 local typedef EvalStatefulConditional ESC;
-local typedef STypeUtils STU:
-
-local constant Bool cDEBUG = Exec.cDEBUG;
+local typedef STypeUtils STU;
 
 transient EvalConditional : Eval {
   constant Symbol cIF                    = 0x1;
@@ -35,35 +33,35 @@ transient EvalConditional : Eval {
     Bool cond = false;
 
     if (symbol == cIF) {
-      if (cDEBUG) dbg.print("(if)");
+      if (exec.mDebug) dbg.print("(if)");
       cond = (arg != 0x0);
 
     } else if (symbol == cIF_ZERO) {
-      if (cDEBUG) dbg.print("(if-zero)");
+      if (exec.mDebug) dbg.print("(if-zero)");
       cond = (exec.getInteger(Exec.cREG1) == 0);
 
     } else if (symbol == cIF_NOT_ZERO) {
-      if (cDEBUG) dbg.print("(if-not-zero)");
+      if (exec.mDebug) dbg.print("(if-not-zero)");
       cond = (exec.getInteger(Exec.cREG1) != 0);
 
     } else if (symbol == cIF_ATTACHED) {
-      if (cDEBUG) dbg.print("(if-attached)");
+      if (exec.mDebug) dbg.print("(if-attached)");
       cond = exec.getBond(getBondIndex(exec, cSRC)).isAttached();
 
     } else if (symbol == cIF_ATTACHED_NEXT) {
-      if (cDEBUG) dbg.print("(if-attached-next)");
+      if (exec.mDebug) dbg.print("(if-attached-next)");
       cond = isAttachedNext(exec);
 
     } else if (symbol == cIF_ATTACHED_NEXT_2) {
-      if (cDEBUG) dbg.print("(if-attached-next-2)");
+      if (exec.mDebug) dbg.print("(if-attached-next-2)");
       exec.setState(ESC.cSTATE_IF_ATTACHED_NEXT_2);
 
     } else if (symbol == cIF_OTHER_MATCHES_NEXT) {
-      if (cDEBUG) dbg.print("(if-other-matches-next)");
+      if (exec.mDebug) dbg.print("(if-other-matches-next)");
       cond = isOtherMatchingNext(exec);
 
     } else if (symbol == cIF_MATCHES_FLAGS) {
-      if (cDEBUG) dbg.print("(if-matches-flags)");
+      if (exec.mDebug) dbg.print("(if-matches-flags)");
       cond = isMatchingFlags(exec);
 
     } else {
@@ -71,7 +69,7 @@ transient EvalConditional : Eval {
       dbg.print((Unsigned) symbol);
     }
 
-    if (cDEBUG_COND) dbg.print(cond ? "  yes" : "  no");
+    if (exec.mDebug && cDEBUG_COND) dbg.print(cond ? "  yes" : "  no");
 
     if (getArgNum(symbol) == 1)
       return cond ? 1u : Arity.maxof;
