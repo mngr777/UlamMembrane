@@ -22,13 +22,13 @@ transient EvalStatefulFunction : Eval {
       return connectOtherForce(exec, done);
 
     } else if (exec.isState(cSTATE_TRAVERSE)) {
-      done = traverse(exec);
+      return traverse(exec, done);
 
     } else if (exec.isState(cSTATE_BUILD)) {
       return build(exec, done);
 
     } else if (exec.isState(cSTATE_MOVE_TO_OTHER)) {
-      done = moveToOther(exec);
+      return moveToOther(exec, done);
 
     } else if (exec.isState(cSTATE_MOVE_TO_OTHER_NEXT)) {
       return moveToOtherNext(exec, done);
@@ -90,12 +90,13 @@ transient EvalStatefulFunction : Eval {
     return bs.isOk(status);
   }
 
-  // TODO: return and set done value
-  Bool traverse(Exec& exec) {
+  Bool traverse(Exec& exec, Bool& done) {
     Index index = getBondIndex(exec, cSRC);
     Index indexNext = getBondIndex(exec, cDST);
+
     BS.Status status = bu.traverse(0, index, indexNext);
-    return (status != BS.cINACCESSIBLE);
+    done = (status != BS.cINACCESSIBLE);
+    return bs.isOk(status);
   }
 
   Bool build(Exec& exec, Bool& done) {
@@ -136,25 +137,26 @@ transient EvalStatefulFunction : Eval {
     return bs.isOk(status);
   }
 
-  // TODO: return and set done value
-  Bool moveToOther(Exec& exec) {
+  Bool moveToOther(Exec& exec, Bool& done) {
     Index index = getBondIndex(exec, cSRC);
     Index toIndex = getBondIndex(exec, cDST);
     Index otherIndex = (index == Exec.cOUTPUT) ? Exec.cINPUT : Exec.cOUTPUT;
+    done = false;
 
     QBond& bond = exec.getBond(index);
     QBond& otherBond = exec.getBond(otherIndex);
-    if (!bond.isAttached() || !otherBond.isAttached())
-      return true;
+    if (!bond.isAttached() || !otherBond.isAttached()) {
+      // Nothing to attach and/or nothing to attach to
+      done = true;
+      return false;
+    }
 
     SiteNum site = bond.getSiteNumber();
     SiteNum otherSite = otherBond.getSiteNumber();
 
     BS.Status status = bu.move(site, bond.getIndex(), otherSite, toIndex);
-    if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
-      return false;
-
-    return true;
+    done = (status != BS.cINACCESSIBLE && status != BS.cDISTANCE_EXCEEDS_MAX);
+    return bs.isOk(status);
   }
 
   Bool moveToOtherNext(Exec& exec, Bool& done) {
