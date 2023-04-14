@@ -33,6 +33,7 @@ element Exec : QStateT(7) + QBondableT(4) + QDiffusableT(100) {
   Byte mRegs[4] = {0x0, 0x0, 0x0, 0x0};
 
   @Override Void behave() {
+    detachBrokenBonds();
     step();
     diffuse();
   }

@@ -3,7 +3,7 @@ quark QBond : Fail {
   typedef EventWindow.SiteNum SiteNum;
   typedef Unsigned(6) Site;
   typedef Unsigned(2) Index;
-  typedef Unsigned(3) Num;
+  typedef Unsigned(Index.sizeof + 1u) Num;
 
   constant Num cMAX_NUM = 4;
   constant Unsigned(3) cMAX_DIST = 4;
@@ -131,8 +131,41 @@ quark QBond : Fail {
     return BondStatus.cOK;
   }
 
-  Status checkForSwap(SiteNum otherSite) {
-    return checkForSwap(0, otherSite);
+  Bool isBroken(SiteNum site, Index index) {
+    EventWindow ew;
+
+    if (!isAttached())
+      return false;
+
+    SiteNum otherSite = getSiteNumber(site);
+    if (!ew.isAccessible(otherSite))
+      return false; // cannot decide
+
+    // Is there a bondable atom on the other side?
+    if (!(ew[otherSite] is IBondable))
+      return true;
+
+    // Is the index valid?
+    IBondable& bondable = (IBondable&) ew[otherSite];
+    if (mIndex >= bondable.getBondNum())
+      return true;
+
+    // Does other bond's index match ours?
+    QBond& otherBond = bondable.getBond(mIndex);
+    if (otherBond.mIndex != index)
+      return true;
+
+    // Does other bond's site match ours?
+    SiteNum otherBondSite = otherBond.getSiteNumber(otherSite);
+    // DebugUtils dbg;
+    // dbg.print("QBond.isBroken");
+    // dbg.print(otherBondSite);
+    // dbg.print(site);
+    return (site != otherBondSite);
+  }
+
+  Void reset() {
+    mSite = 0;
   }
 
   Status checkForSwap(SiteNum site, SiteNum otherSite) {

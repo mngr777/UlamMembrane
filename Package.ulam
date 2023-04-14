@@ -83,6 +83,7 @@ element Package : QBondable4 + ITaggable + QDiffusableT(100) {
 
 
   @Override Void behave() {
+    detachBrokenBonds();
     diffuse();
   }
 

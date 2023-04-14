@@ -1,0 +1,14 @@
+/**
+   \symbol BP
+ */
+element BondParameters {
+  /**
+     Detach broken bonds
+   */
+  parameter Bool pDETACH_BROKEN = true;
+
+  /**
+     Complain about broken bonds
+   */
+  parameter Bool pDEBUG_BROKEN = true;
+}

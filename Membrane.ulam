@@ -12,6 +12,7 @@ element Membrane : QBondableT(4) + QDiffusableT(20, 2) {
   constant QBond.Index cNEXT   = 3;
 
   @Override Void behave() {
+    detachBrokenBonds();
     diffuse();
   }
 

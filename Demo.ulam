@@ -13,7 +13,7 @@ element DemoParameters {
 
      Attach TreeBuilder atom to the first item in input sequence.
    */
-  parameter Bool cBOOTSTRAP = true;
+  parameter Bool pBOOTSTRAP = true;
 }
 
 
@@ -100,7 +100,7 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
 
   Void attachTreeBuilder() {
     DemoParameters params;
-    if (!params.cBOOTSTRAP) {
+    if (!params.pBOOTSTRAP) {
       setState(cSTATE_DONE);
       return;
     }

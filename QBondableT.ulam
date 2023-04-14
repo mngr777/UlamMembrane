@@ -25,6 +25,26 @@ quark QBondableT(Unsigned(3) cMAX_BOND_NUM, Unsigned(3) cMAX_DIST = 4) : IBondab
     return mBonds[index];
   }
 
+  @Override Void detachBrokenBonds(SiteNum site) {
+    BondParameters params;
+    if (!params.pDETACH_BROKEN)
+      return;
+
+    DebugUtils dbg;
+    for (QBond.Num i = 0; i < cMAX_BOND_NUM; i++) {
+      QBond.Index index = (QBond.Index) i;
+      QBond& bond = getBond(index);
+
+      if (bond.isBroken(site, index)) {
+        if (params.pDEBUG_BROKEN) {
+          dbg.print("Broken bond, index:");
+          dbg.print(i);
+        }
+        bond.reset();
+      }
+    }
+  }
+
   @Override Bool checkBondsForSwap(SiteNum site, SiteNum siteOther) {
     BondStatus bs;
     for (QBond.Num i = 0; i < cMAX_BOND_NUM; i++) {
