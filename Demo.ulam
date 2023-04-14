@@ -627,6 +627,7 @@ transient Demo_SequenceData {
     if (tag != 0x0) {
       data = pd.setTag(data, tag);
       data = pd.setIsActive(data, isActive);
+      data = pd.setIsActiveDefault(data, isActive);
     }
     return data;
   }
