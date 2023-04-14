@@ -436,7 +436,7 @@ element Demo_MembraneBuilder : QStateT(3) + QBondableT(1) + QDiffusableT(100) + 
    23       STU.cPACKAGE
    24       ES.cNO_EXEC)))
 
-   # Build other layer atoms:
+   # Build second membrane layer atoms:
     1 (with-input
     2  (if-attached
     3  +-(with-dst-2                    ; "other" membrane bond
@@ -549,7 +549,7 @@ transient Demo_SequenceData {
     /* 23       */ cCNST | (Byte) STU.cPACKAGE, 0,
     /* 24       */ cCNST | (Byte) ES.cNO_EXEC, 0,
 
-    /* # Build other layer atoms */
+    /* # Build second membrane layer atoms */
     /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x2,
     /*  2   */ cCOND | EC.cIF_ATTACHED, 0,
     /*  3     */ cBLCK | EB.cWITH_DST_2, 0,
@@ -641,5 +641,171 @@ transient Demo_SequenceData {
       arity = ef.getArity(symbol);
     }
     return arity;
+  }
+}
+
+
+/**
+   Build second membrane layer, hardcoded for testing
+
+   \symbol DL
+ */
+element Demo_MembraneLayerBuilder : Demo_MembraneCrawler {
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
+
+  @Override Bool doWork() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& bond = getBond(0);
+    SiteNum site = bond.getSiteNumber();
+
+    // Get current membrane atom
+    IBondable& bondable = (IBondable&) ew[site];
+    QBond& otherBond = bondable.getBond(Membrane.cOTHER);
+    if (otherBond.isAttached())
+      return true; // already has "other" atom attached
+
+    // Place new membrane atom
+    Membrane membrane;
+    SiteNum otherSite = ewm.findEmptySiteAround(site, 1, bu.maxDist(membrane, bondable));
+    if (otherSite == SiteNum.maxof)
+      return false;
+    ew[otherSite] = membrane;
+
+    // Attach
+    if (!bs.isOk(bu.attach(site, Membrane.cOTHER, otherSite, Membrane.cOTHER))) {
+      Empty empty;
+      ew[otherSite] = empty;
+      return false;
+    }
+    return true;
+  }
+}
+
+
+/**
+   \symbol DR
+ */
+element Demo_MembraneRepair : Demo_MembraneCrawler {
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
+
+  @Override Bool doWork() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    /*
+           other  otherNext/nextOther
+              -o---o-
+               |   |
+              -o---o-
+       current |  next
+               @
+              crawler
+     */
+
+    QBond& bond = getBond(0);
+    SiteNum site = bond.getSiteNumber();
+    Membrane& current = (Membrane&) ew[site];
+
+    QBond& otherBond = current.getBond(Membrane.cOTHER);
+    QBond& nextBond = current.getBond(Membrane.cNEXT);
+    if (!otherBond.isAttached() || !nextBond.isAttached())
+      return true;
+
+    SiteNum otherSite = otherBond.getSiteNumber(site);
+    SiteNum nextSite = nextBond.getSiteNumber(site);
+    if (!ew.isAccessible(otherSite) || !ew.isAccessible(nextSite))
+      return false;
+
+    Membrane& other = (Membrane&) ew[otherSite];
+    Membrane& next = (Membrane&) ew[nextSite];
+    QBond& otherNextBond = other.getBond(Membrane.cNEXT);
+    QBond& nextOtherBond = next.getBond(Membrane.cOTHER);
+    if (!nextOtherBond.isAttached())
+      return true;
+
+    SiteNum nextOtherSite = nextOtherBond.getSiteNumber(nextSite);
+    if (otherNextBond.isAttached() &&
+        otherNextBond.getSiteNumber(otherSite) == nextOtherSite)
+    {
+      return true; // already attached correctly
+    }
+    if (!ew.isAccessible(nextOtherSite))
+      return false;
+
+    BS.Status status = bu.attachForce(otherSite, Membrane.cNEXT, nextOtherSite, Membrane.cPREV);
+    return
+      (status != BS.cINACCESSIBLE) &&
+      (status != BS.cDISTANCE_EXCEEDS_MAX);
+  }
+}
+
+
+quark Demo_MembraneCrawler : QStateT(3) + QBondableT(1) + QDiffusableT(100) {
+  constant State cSTATE_ATTACH   = 0;
+  constant State cSTATE_WORK     = 1;
+  constant State cSTATE_ADVANCE  = 2;
+
+  // return true when work is done to advance
+  virtual Bool doWork();
+
+  Void step() {
+    if (isState(cSTATE_ATTACH)) {
+      attach();
+    } else if (isState(cSTATE_WORK)) {
+      work();
+    } else if (isState(cSTATE_ADVANCE)) {
+      advance();
+    }
+  }
+
+  Void attach() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(0);
+    if (bond.isAttached())
+      setState(cSTATE_WORK);
+
+    // Find membrane to attach to
+    Membrane membrane;
+    WindowServices ws;
+    ws.reset(1, bu.maxDist(membrane, (IBondable&) ew[0]));
+    if (!ws.scan(au.getType(membrane)))
+      return;
+    SiteNum site = ws.getPick();
+
+    if (bs.isOk(bu.attach(0, 0, site, 0)))
+      setState(cSTATE_WORK);
+  }
+
+  Void work() {
+    if (doWork())
+      setState(cSTATE_ADVANCE);
+  }
+
+  Void advance() {
+    BondStatus bs;
+    BondUtils bu;
+
+    // Move to "next" atom, try "other" it there's no next
+    BS.Status status = bu.traverse(0, 0, Membrane.cNEXT);
+    if (status == BS.cNO_NEXT)
+      status = bu.traverse(0, 0, Membrane.cOTHER);
+
+    if (bs.isOk(status))
+      setState(cSTATE_WORK);
   }
 }
