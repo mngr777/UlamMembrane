@@ -157,10 +157,6 @@ quark QBond : Fail {
 
     // Does other bond's site match ours?
     SiteNum otherBondSite = otherBond.getSiteNumber(otherSite);
-    // DebugUtils dbg;
-    // dbg.print("QBond.isBroken");
-    // dbg.print(otherBondSite);
-    // dbg.print(site);
     return (site != otherBondSite);
   }
 
