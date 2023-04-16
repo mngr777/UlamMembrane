@@ -51,7 +51,7 @@ transient BondUtils + Fail {
       return BS.cINACCESSIBLE;
 
     // Detach
-    BS.Status status = bond1.detach(site1);
+    Status status = bond1.detach(site1);
     if (bs.isOk(status))
       status = bond2.detach(site2);
 
@@ -237,6 +237,10 @@ transient BondUtils + Fail {
     return swap(site, index1, index2);
   }
 
+
+  /**
+     Given bondable and two bond indexes, swap attached atoms between bonds
+   */
   Status swap(SiteNum site, Index index1, Index index2) {
     if (index1 == index2)
       return BS.cOK;
@@ -263,7 +267,7 @@ transient BondUtils + Fail {
       return BS.cINACCESSIBLE;
 
     // Detach
-    BS.Status status = bond1.detach(site);
+    Status status = bond1.detach(site);
     if (bs.isOk(status))
       status = bond2.detach(site);
 

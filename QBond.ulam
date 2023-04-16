@@ -6,7 +6,7 @@ quark QBond : Fail {
   typedef Unsigned(Index.sizeof + 1u) Num;
 
   constant Num cMAX_NUM = 4;
-  constant Unsigned(3) cMAX_DIST = 4;
+  constant Unsigned(3) cMAX_DIST = 4; // TODO: remove, use BondUtils.maxDist()
 
   Index mIndex;
   Site mSite = 0;

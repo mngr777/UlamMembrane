@@ -129,6 +129,11 @@ transient PackageData {
     return dd.setHi(datum, (Byte) isActive, cIS_ACTIVE_MASK, cIS_ACTIVE_SHIFT);
   }
 
+
+  Datum resetIsActive(Datum datum) {
+    return setIsActive(datum, isActiveDefault(datum));
+  }
+
   // Aux: executable
 
   Bool isFinal(Datum datum) {

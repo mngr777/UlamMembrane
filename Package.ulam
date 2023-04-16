@@ -11,6 +11,7 @@ element Package : QBondable4 + ITaggable + QDiffusableT(100) {
   // Sequence (non-executable)
   constant QBond.Index cPREV   = 1;
   constant QBond.Index cNEXT   = 2;
+  constant QBond.Index cOTHER  = 3;
 
   // Tree (executable)
   constant QBond.Index cUP     = 1;
