@@ -837,17 +837,24 @@ element Demo_Copy : QStateT(3) + QBondableT(2) + QDiffusableT(100) + QMortal + F
 
     if (!copyBond.isAttached()) {
       /// First item
+
+      BS.Status status = BS.cOK;
+
       // Attach to self
-      if (!bs.isOk(bu.attach(0, cCOPY, site, Package.cCOMMON))) {
-        Empty empty;
-        ew[site] = empty;
-        return;
-      }
+      status = bu.attach(0, cCOPY, site, Package.cCOMMON);
 
       // Attach to original (marking beginning of copy)
-      if (!bs.isOk(bu.attach(origSite, Package.cOTHER, site, Package.cOTHER))) {
-        if (!bs.isOk(bu.detach(0, cCOPY)))
-          fail("Demo_Copy.copy: failed to detach first item copy");
+      if (bs.isOk(status)) {
+        status = bu.attach(origSite, Package.cOTHER, site, Package.cOTHER);
+        if (!bs.isOk(status)) {
+          // Try to detach and start over
+          if (!bs.isOk(bu.detach(0, cCOPY)))
+            fail("Demo_Copy.copy: failed to detach first item copy");
+        }
+      }
+
+      // Cleanup on error
+      if (!bs.isOk(status)) {
         Empty empty;
         ew[site] = empty;
         return;
