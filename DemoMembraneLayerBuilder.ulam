@@ -1,0 +1,43 @@
+/**
+   Build second membrane layer, hardcoded for testing
+
+   \symbol DL
+   \color #e7daf7
+ */
+element DemoMembraneLayerBuilder : DemoQMembraneCrawler {
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
+
+  @Override Bool doWork() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& bond = getBond(0);
+    SiteNum site = bond.getSiteNumber();
+
+    // Get current membrane atom
+    IBondable& bondable = (IBondable&) ew[site];
+    QBond& otherBond = bondable.getBond(Membrane.cOTHER);
+    if (otherBond.isAttached())
+      return true; // already has "other" atom attached
+
+    // Place new membrane atom
+    Membrane membrane;
+    SiteNum otherSite = ewm.findEmptySiteAround(site, 1, bu.maxDist(membrane, bondable));
+    if (otherSite == SiteNum.maxof)
+      return false;
+    ew[otherSite] = membrane;
+
+    // Attach
+    if (!bs.isOk(bu.attach(site, Membrane.cOTHER, otherSite, Membrane.cOTHER))) {
+      Empty empty;
+      ew[otherSite] = empty;
+      return false;
+    }
+    return true;
+  }
+}

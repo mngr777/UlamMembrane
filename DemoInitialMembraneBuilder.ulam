@@ -1,0 +1,266 @@
+local typedef BondStatus BS;
+local typedef QBondableT(1) QBondable1;
+
+/**
+   \symbol DI
+   \color #85c9e9
+ */
+element DemoInitialMembraneBuilder : QStateT(3) + QBondable1 + QDiffusableT(100) + QMortal {
+  typedef C2D.Dir Dir;
+
+  constant Unsigned(5) cSIDE_LENGTH = 20;
+  constant Unsigned(2) cSTEP_LENGTH = 2;
+
+  constant State cSTATE_MOVE_OUT       = 0;
+  constant State cSTATE_BUILD          = 1;
+  constant State cSTATE_ANCHOR         = 2;
+  constant State cSTATE_TRAVERSE       = 3;
+  constant State cSTATE_FORWARD        = 4;
+  constant State cSTATE_CLOSE          = 5;
+  constant State cSTATE_REMOVE_ANCHORS = 6;
+
+  Dir mDir = 0; // South
+  Unsigned(5) mCount = 0;
+  Unsigned(2) mMoveCount = 0;
+
+  @Override Void behave() {
+    if (isState(cSTATE_MOVE_OUT)) {
+      moveOut();
+    } else if (isState(cSTATE_BUILD)) {
+      build();
+    } else if (isState(cSTATE_ANCHOR)) {
+      anchor();
+    } else if (isState(cSTATE_TRAVERSE)) {
+      traverse();
+    } else if (isState(cSTATE_FORWARD)) {
+      forward();
+    } else if (isState(cSTATE_CLOSE)) {
+      close();
+    } else if (isState(cSTATE_REMOVE_ANCHORS)) {
+      removeAnchors();
+      diffuse();
+    } else if (isState(cSTATE_DONE)) {
+      die();
+    }
+  }
+
+  Void moveOut() {
+    // NOTE: cannot do checks after swapping
+    if (mCount >= cSIDE_LENGTH * cSTEP_LENGTH / 2) {
+      mCount = 0;
+      setState(cSTATE_BUILD);
+      return;
+    }
+
+    EventWindow ew;
+    SwapHelper sh;
+    C2D origin;
+    C2D coord = origin.neighbor(5); // North-West
+    if (ew.isEmpty(coord)) {
+      mCount++; // increment _before_ swapping
+      if (!sh.swap(origin, coord))
+        mCount--;
+    }
+  }
+
+  Void build() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    // Build
+    SiteNum site = ewm.findEmptySite(1, 2);
+    if (site == SiteNum.maxof)
+      return;
+    Membrane membrane;
+    ew[site] = membrane;
+
+    BS.Status status = BS.cOK;
+    QBond& bond = getBond(0);
+    if (!bond.isAttached()) {
+      // First membrane atom, attach to self
+      status = bu.attach(0, 0, site, Membrane.cCOMMON);
+    } else {
+      // Attach to previous membrane atom
+      status = bu.attach(bond.getSiteNumber(), Membrane.cNEXT, site, Membrane.cPREV);
+    }
+
+    if (bs.isOk(status)) {
+      setState(cSTATE_ANCHOR);
+
+    } else {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+  }
+
+  Void anchor() {
+    BondStatus bs;
+    BondUtils bu;
+    CoordUtils cu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& bond = getBond(0);
+    SiteNum membraneSite = bond.getSiteNumber();
+    Membrane& membrane = (Membrane&) ew[membraneSite];
+    QBond& otherBond = membrane.getBond(Membrane.cOTHER);
+
+    if (mCount > 0 || otherBond.isAttached()) {
+      setState(cSTATE_TRAVERSE);
+      return;
+    }
+
+    // Build anchor
+    C2D coord = ew.getCoordRaw(getForwardSite());
+    coord = cu.rotateLeft(coord);
+    SiteNum site = ew.getSiteNumberRaw(-coord);
+    if (!ew.isEmpty(site))
+      return;
+    Anchor anchor;
+    ew[site] = anchor;
+
+    // Attach to membrane
+    BS.Status status = bu.attach(site, 0, membraneSite, Membrane.cOTHER);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+      return;
+    }
+  }
+
+  Void traverse() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    BS.Status status = bu.traverse(0, 0, Membrane.cNEXT);
+    if (bs.isOk(status) || status == BS.cNO_NEXT)
+      setState(cSTATE_FORWARD);
+  }
+
+  Void forward() {
+    // NOTE: cannot do checks after swapping
+    if (mMoveCount >= cSTEP_LENGTH) {
+      mMoveCount = 0;
+      mCount++;
+      if (mCount >= cSIDE_LENGTH) {
+        // Side finished, move to next side
+        mCount = 0;
+        mDir = getNextDir();
+        if (mDir == 0) {
+          // Last side finished, close the membrane
+          setState(cSTATE_CLOSE);
+          return;
+        }
+      }
+      setState(cSTATE_BUILD);
+      return;
+    }
+
+    EventWindow ew;
+    SwapHelper sh;
+
+    SiteNum forwardSite = getForwardSite();
+    if (ew.isEmpty(forwardSite)) {
+      mMoveCount++; // increment _before_ swapping
+      if (!sh.swap(0, forwardSite))
+        mMoveCount--;
+    }
+  }
+
+  Void close() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(0);
+    SiteNum prevSite = bond.getSiteNumber();
+    SiteNum nextSite = getFirstSite();
+    if (nextSite == SiteNum.maxof)
+      return;
+
+    BS.Status status = bu.attach(prevSite, Membrane.cNEXT, nextSite, Membrane.cPREV);
+    if (bs.isOk(status)) {
+      mCount = 0;
+      setState(cSTATE_REMOVE_ANCHORS);
+    }
+  }
+
+  Void removeAnchors() {
+    BondUtils bu;
+    EventWindow ew;
+
+    // Get membrane
+    QBond& bond = getBond(0);
+    SiteNum membraneSite = bond.getSiteNumber();
+    Membrane& membrane = (Membrane&) ew[membraneSite];
+
+    // Get anchor
+    QBond& anchorBond = membrane.getBond(Membrane.cOTHER);
+    Bool isAttached = anchorBond.isAttached();
+    SiteNum anchorSite = isAttached
+      ? anchorBond.getSiteNumber(membraneSite)
+      : SiteNum.maxof;
+
+    if (isAttached && !ew.isAccessible(anchorSite))
+      return;
+
+    if (!isAttached || !(ew[anchorSite] is Anchor)) {
+      // no anchor, move to next membrane atom
+      bu.traverse(0, 0, Membrane.cNEXT);
+      return;
+    }
+
+    // Detach and destroy anchor
+    anchorBond.detach(membraneSite);
+    Empty empty;
+    ew[anchorSite] = empty;
+    mCount++;
+
+    // Are all anchors removed?
+    if (mCount == 4)
+      setState(cSTATE_DONE);
+  }
+
+  SiteNum getFirstSite() {
+    EventWindow ew;
+    MDist mdist;
+
+    for (Int s = 1; s <= mdist.getLastIndex(4); s++) {
+      SiteNum site = (SiteNum) s;
+      Atom& atom = ew[site];
+      if (atom as Membrane)
+        if (!atom.getBond(Membrane.cPREV).isAttached())
+          return site;
+    }
+    return SiteNum.maxof;
+  }
+
+  Dir getNextDir() {
+    return (Dir) (((Int) mDir + 2) % 8);
+  }
+
+  SiteNum getForwardSite() {
+    EventWindow ew;
+    C2D origin;
+    return ew.getSiteNumber(origin.neighbor(mDir));
+  }
+
+  @Override Void renderGraphics() {
+    self.QBondable1.renderGraphics();
+
+    Drawable drawable;
+    if (!drawable.canDraw())
+      return;
+
+    ColorUtils cu;
+    C2D start;
+    C2D end = start.neighbor(mDir) * (Drawable.cUNITS_PER_SITE * 3 / 4);
+    ARGB oncol = cu.color(0x0085c9e9);
+    ARGB offcol = oncol;
+    drawable.drawMaskedLine(start, end, oncol, offcol, 0xffffffff);
+  }
+}

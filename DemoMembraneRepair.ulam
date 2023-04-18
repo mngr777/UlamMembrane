@@ -1,0 +1,65 @@
+local typedef BondStatus BS;
+
+/**
+   Membrane repair, hardcoded for testing
+
+   \symbol DR
+   \color #e7daf7
+ */
+element DemoMembraneRepair : DemoQMembraneCrawler {
+  @Override Void behave() {
+    step();
+    diffuse();
+  }
+
+  @Override Bool doWork() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    /*
+           other  otherNext/nextOther
+              -o---o-
+               |   |
+              -o---o-
+       current |  next
+               @
+              crawler
+     */
+
+    QBond& bond = getBond(0);
+    SiteNum site = bond.getSiteNumber();
+    Membrane& current = (Membrane&) ew[site];
+
+    QBond& otherBond = current.getBond(Membrane.cOTHER);
+    QBond& nextBond = current.getBond(Membrane.cNEXT);
+    if (!otherBond.isAttached() || !nextBond.isAttached())
+      return true;
+
+    SiteNum otherSite = otherBond.getSiteNumber(site);
+    SiteNum nextSite = nextBond.getSiteNumber(site);
+    if (!ew.isAccessible(otherSite) || !ew.isAccessible(nextSite))
+      return false;
+
+    Membrane& other = (Membrane&) ew[otherSite];
+    Membrane& next = (Membrane&) ew[nextSite];
+    QBond& otherNextBond = other.getBond(Membrane.cNEXT);
+    QBond& nextOtherBond = next.getBond(Membrane.cOTHER);
+    if (!nextOtherBond.isAttached())
+      return true;
+
+    SiteNum nextOtherSite = nextOtherBond.getSiteNumber(nextSite);
+    if (otherNextBond.isAttached() &&
+        otherNextBond.getSiteNumber(otherSite) == nextOtherSite)
+    {
+      return true; // already attached correctly
+    }
+    if (!ew.isAccessible(nextOtherSite))
+      return false;
+
+    BS.Status status = bu.attachForce(otherSite, Membrane.cNEXT, nextOtherSite, Membrane.cPREV);
+    return
+      (status != BS.cINACCESSIBLE) &&
+      (status != BS.cDISTANCE_EXCEEDS_MAX);
+  }
+}

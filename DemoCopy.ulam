@@ -1,0 +1,182 @@
+local typedef BondStatus BS;
+
+/**
+   Copy non-executable package (looped) sequence, hardcoded for testing
+
+   \symbol DC
+   \color #caf7b7
+ */
+element DemoCopy : QStateT(3) + QBondableT(2) + QDiffusableT(100) + QMortal + Fail {
+  constant QBond.Index cORIG = 0;
+  constant QBond.Index cCOPY = 1;
+
+  constant State cSTATE_ATTACH       = 0;
+  constant State cSTATE_COPY         = 1;
+  constant State cSTATE_ADVANCE_COPY = 2;
+  constant State cSTATE_ADVANCE      = 3;
+  constant State cSTATE_COMPLETE     = 4;
+  constant State cSTATE_DETACH       = 5;
+
+  @Override Void behave() {
+    if (isState(cSTATE_ATTACH)) {
+      attach();
+    } else if (isState(cSTATE_COPY)) {
+      copy();
+    } else if (isState(cSTATE_ADVANCE_COPY)) {
+      advanceCopy();
+    } else if (isState(cSTATE_ADVANCE)) {
+      advance();
+    } else if (isState(cSTATE_COMPLETE)) {
+      complete();
+    } else if (isState(cSTATE_DETACH)) {
+      detach();
+    }
+
+    if (isState(cSTATE_DONE)) {
+      die();
+    } else {
+      diffuse();
+    }
+  }
+
+  Void attach() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+
+    // Find non-exec package to attach to
+    Package pkg;
+    WindowServices ws;
+    ws.reset(1, bu.maxDist(pkg, self));
+    if (!ws.scan(au.getType(pkg)))
+      return;
+    SiteNum site = ws.getPick();
+
+    if (bs.isOk(bu.attach(0, cORIG, site, Package.cCOMMON)))
+      setState(cSTATE_COPY);
+  }
+
+  Void copy() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+    PackageData pd;
+
+    QBond& origBond = getBond(cORIG);
+    QBond& copyBond = getBond(cCOPY);
+
+    // Get current package
+    SiteNum origSite = origBond.getSiteNumber();
+    Package& orig = (Package&) ew[origSite];
+    if (orig.getBond(Package.cOTHER).isAttached()) {
+      // First item
+      setState(cSTATE_COMPLETE);
+      return;
+    }
+
+    // Make copy
+    Package pkg;
+    pkg.setData(orig.getData());
+    pkg.setAux(pd.resetIsActive(orig.getAux()));
+
+    // Place around self
+    SiteNum site = ewm.findEmptySite(1, bu.maxDist(self, pkg));
+    if (site == SiteNum.maxof)
+      return;
+    ew[site] = pkg;
+
+    if (!copyBond.isAttached()) {
+      /// First item
+
+      BS.Status status = BS.cOK;
+
+      // Attach to self
+      status = bu.attach(0, cCOPY, site, Package.cCOMMON);
+
+      // Attach to original (marking beginning of copy)
+      if (bs.isOk(status)) {
+        status = bu.attach(origSite, Package.cOTHER, site, Package.cOTHER);
+        if (!bs.isOk(status)) {
+          // Try to detach and start over
+          if (!bs.isOk(bu.detach(0, cCOPY)))
+            fail("Demo_Copy.copy: failed to detach first item copy");
+        }
+      }
+
+      // Cleanup on error
+      if (!bs.isOk(status)) {
+        Empty empty;
+        ew[site] = empty;
+        return;
+      }
+
+      setState(cSTATE_ADVANCE);
+
+    } else {
+      /// Attaching to previous item
+      // Get current copy
+      SiteNum copySite = copyBond.getSiteNumber();
+      Package& copy = (Package&) ew[copySite];
+
+      // Attach new copy package to current copy as next
+      if (!bs.isOk(bu.attach(copySite, Package.cNEXT, site, Package.cPREV))) {
+        Empty empty;
+        ew[site] = empty;
+        return;
+      }
+
+      setState(cSTATE_ADVANCE_COPY);
+    }
+  }
+
+  Void advanceCopy() {
+    BondStatus bs;
+    BondUtils bu;
+
+    BS.Status status = bu.traverse(0, cCOPY, Package.cNEXT);
+    if (bs.isOk(status))
+      setState(cSTATE_ADVANCE);
+  }
+
+  Void advance() {
+    BondStatus bs;
+    BondUtils bu;
+
+    BS.Status status = bu.traverse(0, cORIG, Package.cNEXT);
+    if (bs.isOk(status))
+      setState(cSTATE_COPY);
+  }
+
+  Void complete() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& origBond = getBond(cORIG);
+    QBond& copyBond = getBond(cCOPY);
+    SiteNum origSite = origBond.getSiteNumber();
+    SiteNum copySite = copyBond.getSiteNumber();
+
+    Package& orig = (Package&) ew[origSite];
+    QBond& firstBond = orig.getBond(Package.cOTHER);
+    SiteNum firstSite = firstBond.getSiteNumber(origSite);
+
+    // Attach first to last, completing copy loop
+    BS.Status status = bu.attach(copySite, Package.cNEXT, firstSite, Package.cPREV);
+    if (bs.isOk(status))
+      setState(cSTATE_DETACH);
+  }
+
+  Void detach() {
+    BondStatus bs;
+    BondUtils bu;
+
+    QBond& origBond = getBond(cORIG);
+    SiteNum origSite = origBond.getSiteNumber();
+
+    BS.Status status = bu.detach(origSite, Package.cOTHER);
+    if (bs.isOk(status))
+      setState(cSTATE_DONE);
+  }
+}

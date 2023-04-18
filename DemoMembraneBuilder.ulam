@@ -1,0 +1,186 @@
+local typedef BondStatus BS;
+local typedef CoordUtils CU;
+local typedef EventWindow.SiteNum SiteNum;
+
+/**
+   Build membrane around looped non-executable package sequence.
+   NOTE: This doesn't work at all.
+
+   \symbol DM
+   \color #85c9e9
+ */
+element DemoMembraneBuilder : QStateT(3) + QBondableT(2) + QDiffusableT(100) + QMortal + Fail {
+  constant QBond.Index cPACKAGE  = 0;
+  constant QBond.Index cMEMBRANE = 1;
+
+  constant State cSTATE_ATTACH           = 0;
+  constant State cSTATE_BUILD            = 1;
+  constant State cSTATE_ADVANCE_MEMBRANE = 2;
+  constant State cSTATE_ADVANCE          = 3;
+  constant State cSTATE_COMPLETE         = 4;
+  constant State cSTATE_DETACH           = 5;
+
+  @Override Void behave() {
+    if (isState(cSTATE_ATTACH)) {
+      attach();
+    } else if (isState(cSTATE_BUILD)) {
+      build();
+    } else if (isState(cSTATE_ADVANCE_MEMBRANE)) {
+      advanceMembrane();
+    } else if (isState(cSTATE_ADVANCE)) {
+      advance();
+    } else if (isState(cSTATE_COMPLETE)) {
+      complete();
+    } else if (isState(cSTATE_DETACH)) {
+      detach();
+    }
+
+    if (isState(cSTATE_DONE)) {
+      die();
+    } else {
+      diffuse();
+    }
+  }
+
+  Void attach() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+
+    // Find non-exec package to attach to
+    Package pkg;
+    WindowServices ws;
+    ws.reset(1, bu.maxDist(pkg, self));
+    if (!ws.scan(au.getType(pkg)))
+      return;
+    SiteNum site = ws.getPick();
+
+    if (bs.isOk(bu.attach(0, cPACKAGE, site, Package.cCOMMON)))
+      setState(cSTATE_BUILD);
+  }
+
+  Void build() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    QBond& packageBond = getBond(cPACKAGE);
+    QBond& membraneBond = getBond(cMEMBRANE);
+
+    // Get current package
+    SiteNum packageSite = packageBond.getSiteNumber();
+    C2D packageCoord = ew.getCoordRaw(packageSite);
+    Package& pkg = (Package&) ew[packageSite];
+    if (pkg.getBond(Package.cOTHER).isAttached()) {
+      // First item
+      setState(cSTATE_COMPLETE);
+      return;
+    }
+
+    // Get next package site
+    QBond& nextPackageBond = pkg.getBond(Package.cNEXT);
+    C2D nextPackageCoord = nextPackageBond.getCoord(packageCoord);
+
+    // Place membrane atom
+    Membrane membrane;
+    EventWindowMisc.Radius maxDist = bu.maxDist(self, membrane);
+    SiteNum site = ewm.findEmptySiteAroundOrient(packageCoord, nextPackageCoord, 1, maxDist, CU.cCCW);
+    if (site == SiteNum.maxof)
+      return;
+    ew[site] = membrane;
+
+    if (!membraneBond.isAttached()) {
+      /// First membrane atom
+
+      BS.Status status = BS.cOK;
+
+      // Attach to self
+      status = bu.attach(0, cMEMBRANE, site, Membrane.cCOMMON);
+
+      // Attach to package (marking beginning of membrane)
+      if (bs.isOk(status)) {
+        status = bu.attach(packageSite, Package.cOTHER, site, Membrane.cOTHER);
+        if (!bs.isOk(status)) {
+          // Try to detach and start over
+          if (!bs.isOk(bu.detach(0, cMEMBRANE)))
+            fail("Demo_MembraneBuilder.build: failed to detach first membrane atom");
+        }
+      }
+
+      // Cleanup on error
+      if (!bs.isOk(status)) {
+        Empty empty;
+        ew[site] = empty;
+        return;
+      }
+
+      setState(cSTATE_ADVANCE);
+
+    } else {
+      /// Next membrane atom
+      // Get current atom
+      SiteNum membraneSite = membraneBond.getSiteNumber();
+      Membrane& membrane = (Membrane&) ew[membraneSite];
+
+      // Attach new membrane atom to current
+      if (!bs.isOk(bu.attach(membraneSite, Membrane.cNEXT, site, Membrane.cPREV))) {
+        Empty empty;
+        ew[site] = empty;
+        return;
+      }
+
+      setState(cSTATE_ADVANCE_MEMBRANE);
+    }
+  }
+
+  Void advanceMembrane() {
+    BondStatus bs;
+    BondUtils bu;
+
+    BS.Status status = bu.traverse(0, cMEMBRANE, Membrane.cNEXT);
+    if (bs.isOk(status))
+      setState(cSTATE_ADVANCE);
+  }
+
+  Void advance() {
+    BondStatus bs;
+    BondUtils bu;
+
+    BS.Status status = bu.traverse(0, cPACKAGE, Package.cNEXT);
+    if (bs.isOk(status))
+      setState(cSTATE_BUILD);
+  }
+
+  Void complete() {
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& packageBond = getBond(cPACKAGE);
+    QBond& membraneBond = getBond(cMEMBRANE);
+    SiteNum packageSite = packageBond.getSiteNumber();
+    SiteNum membraneSite = membraneBond.getSiteNumber();
+
+    Package& pkg = (Package&) ew[packageSite];
+    QBond& firstBond = pkg.getBond(Package.cOTHER);
+    SiteNum firstSite = firstBond.getSiteNumber(packageSite);
+
+    // Attach first membrane atom to last, completing the membrane
+    BS.Status status = bu.attach(membraneSite, Membrane.cNEXT, firstSite, Membrane.cPREV);
+    if (bs.isOk(status))
+      setState(cSTATE_DETACH);
+  }
+
+  Void detach() {
+    BondStatus bs;
+    BondUtils bu;
+
+    QBond& packageBond = getBond(cPACKAGE);
+    SiteNum packageSite = packageBond.getSiteNumber();
+
+    BS.Status status = bu.detach(packageSite, Package.cOTHER);
+    if (bs.isOk(status))
+      setState(cSTATE_DONE);
+  }
+}

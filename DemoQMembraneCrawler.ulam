@@ -1,0 +1,63 @@
+local typedef BondStatus BS;
+
+/**
+   Crawl along a membrane and do some work, advance when `doWork` returns true.
+ */
+quark DemoQMembraneCrawler : QStateT(3) + QBondableT(1) + QDiffusableT(100) + QMortal {
+  constant State cSTATE_ATTACH   = 0;
+  constant State cSTATE_WORK     = 1;
+  constant State cSTATE_ADVANCE  = 2;
+
+  // return true when work is done to advance
+  virtual Bool doWork();
+
+  Void step() {
+    if (isState(cSTATE_ATTACH)) {
+      attach();
+    } else if (isState(cSTATE_WORK)) {
+      work();
+    } else if (isState(cSTATE_ADVANCE)) {
+      advance();
+    }
+  }
+
+  Void attach() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+
+    QBond& bond = getBond(0);
+    if (bond.isAttached())
+      setState(cSTATE_WORK);
+
+    // Find membrane to attach to
+    Membrane membrane;
+    WindowServices ws;
+    ws.reset(1, bu.maxDist(membrane, (IBondable&) ew[0]));
+    if (!ws.scan(au.getType(membrane)))
+      return;
+    SiteNum site = ws.getPick();
+
+    if (bs.isOk(bu.attach(0, 0, site, Membrane.cCOMMON)))
+      setState(cSTATE_WORK);
+  }
+
+  Void work() {
+    if (doWork())
+      setState(cSTATE_ADVANCE);
+  }
+
+  Void advance() {
+    BondStatus bs;
+    BondUtils bu;
+
+    // Move to "next" atom, try "other" it there's no next
+    BS.Status status = bu.traverse(0, 0, Membrane.cNEXT);
+    if (status == BS.cNO_NEXT)
+      status = bu.traverse(0, 0, Membrane.cOTHER);
+
+    if (bs.isOk(status))
+      setState(cSTATE_WORK);
+  }
+}

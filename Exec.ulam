@@ -3,6 +3,10 @@ local typedef EvalStatefulConditional ESC;
 local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
+/**
+   \symbol Ex
+   \color #85c9e9
+ */
 element Exec : QStateT(6) + QBondableT(4) + QDiffusableT(100) {
   typedef DataUtils.Datum Datum;
   typedef DataUtils.Byte Byte;

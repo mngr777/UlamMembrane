@@ -2,7 +2,7 @@ DEMO:=Membrane1
 
 run: $(DEMO).mfz
 #	../../MFM/bin/mfzrun $(DEMO).mfz
-	../../MFM/bin/mfzrun $(DEMO).mfz run {1F1}
+	../../MFM/bin/mfzrun $(DEMO).mfz run {2F2}
 #	mfzrun $(DEMO).mfz run {1F1}
 
 $(DEMO).mfz: *.ulam

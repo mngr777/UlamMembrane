@@ -1,0 +1,48 @@
+local typedef EventWindow.SiteNum SiteNum;
+
+/**
+   Attach package to membrane (test)
+
+   \symbol DA
+   \color #caf7b7
+ */
+element DemoAttach : QMortal {
+  @Override Void behave() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+    EventWindow ew;
+    MDist mdist;
+
+    // What the maximum bond distance?
+    Package pkg;
+    Membrane membrane;
+    Unsigned maxDist = bu.maxDist(pkg, membrane);
+
+    // Find package (at distance 2)
+    WindowServices ws;
+    ws.reset(1, 2);
+    if (!ws.scan(au.getType(pkg)))
+      return;
+    SiteNum packageSite = ws.getPick();
+    C2D packageCoord = ew.getCoordRaw(packageSite);
+
+    for (Int s = 1; s <= mdist.getLastIndex((MDist.Radius) ew.getRadius()); s++) {
+      SiteNum site = (SiteNum) s;
+
+      // Is it a membrane?
+      if (!(ew[site] is Membrane))
+        continue;
+
+      // Is it close enough to bond?
+      C2D coord = ew.getCoordRaw(site);
+      if (packageCoord.manhattanDistance(coord) > maxDist)
+        continue;
+
+      if (bs.isOk(bu.attach(packageSite, Package.cCOMMON, site, Membrane.cCOMMON)))
+        break;
+    }
+
+    die();
+  }
+}

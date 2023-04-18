@@ -1,6 +1,8 @@
 local typedef QBondableT(4) QBondable4;
 
 /**
+   \symbol P
+   \color #008100
    \symmetry all
  */
 element Package : QBondable4 + ITaggable + QDiffusableT(100) {

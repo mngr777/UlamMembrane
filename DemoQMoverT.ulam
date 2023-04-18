@@ -1,0 +1,41 @@
+local typedef BondStatus BS;
+
+/**
+   Attach to package or membrane and move it
+ */
+quark DemoQMoverT(C2D.Dir cDIR) : QBondableT(2) + QMortal {
+  @Override Void behave() {
+    if (attach()) move();
+    else die();
+  }
+
+  Bool move() {
+    SwapHelper sh;
+    C2D origin;
+    return sh.swap(origin, origin.neighbor(cDIR));
+  }
+
+  Bool attach() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+
+    QBond& bond = getBond(0);
+    if (bond.isAttached())
+      return true;
+
+    Package pkg;
+    Membrane membrane;
+    WindowServices ws;
+    ws.reset(1, 2);
+    if (!ws.scan(au.getType(pkg), au.getType(membrane)))
+      return false;
+
+    SiteNum site = ws.getPick(0);
+    if (site == SiteNum.maxof)
+      site = ws.getPick(1);
+
+    BS.Status status = bu.attach(0, 0, site, BondUtils.cCOMMON);
+    return bs.isOk(status);
+  }
+}
