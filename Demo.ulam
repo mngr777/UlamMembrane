@@ -194,11 +194,15 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
    1. Next layer atoms are there,        2. Atoms of both layers are attached,
       but not attached to each other:       but one layer has extra atoms in between
                                             because of growth:
-   "other" layer:   o   o                    -o-------o-
-                    |   |                     |       |
-   current layer:  -o---o-                   -o---o---o-
-                    |                         |
-                    @                         @
+   "other" layer:   o   o       -o---o       -o-------o-      -o       o-
+                    |   |        |   |        |       |   ->   |       |
+   current layer:  -o---o-  ->  -o---o-      -o---o---o-      -o---o---o
+                    |            |            |                |
+                    @            @            @                @
+
+      Connect the atoms in "other" layer.   Break up atoms in "other" layer, to be reduced to 1st case
+                                            on next iteration.
+
     1 (with-input
     2   (if-attached
     3   +-(prog2
