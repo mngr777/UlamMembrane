@@ -10,9 +10,10 @@ transient EvalStatefulFunction : Eval {
   constant State cSTATE_BUILD                = 36;
   constant State cSTATE_MOVE_TO_OTHER        = 37;
   constant State cSTATE_MOVE_TO_OTHER_NEXT   = 38;
+  constant State cSTATE_INSERT_SEQ           = 39;
 
   constant State cSTATE_FIRST = cSTATE_ATTACH_OTHER_TO_NEXT;
-  constant State cSTATE_LAST  = cSTATE_MOVE_TO_OTHER_NEXT;
+  constant State cSTATE_LAST  = cSTATE_INSERT_SEQ;
 
   Byte eval(Exec& exec, Package& tree, Bool& done) {
     if (exec.isState(cSTATE_ATTACH_OTHER_TO_NEXT)) {
@@ -32,6 +33,9 @@ transient EvalStatefulFunction : Eval {
 
     } else if (exec.isState(cSTATE_MOVE_TO_OTHER_NEXT)) {
       return moveToOtherNext(exec, done);
+
+    } else if (exec.isState(cSTATE_INSERT_SEQ)) {
+      return insertSeq(exec, done);
     }
 
     return 0x0;
@@ -86,7 +90,7 @@ transient EvalStatefulFunction : Eval {
     SiteNum site = bond.getSiteNumber();
     SiteNum otherSite = otherBond.getSiteNumber();
     BS.Status status = bu.attachForce(site, connectIndex, otherSite, connectOtherIndex);
-    done = (status != BS.cDISTANCE_EXCEEDS_MAX);
+    done = (status != BS.cINACCESSIBLE && status != BS.cDISTANCE_EXCEEDS_MAX);
     return bs.isOk(status);
   }
 
@@ -192,6 +196,48 @@ transient EvalStatefulFunction : Eval {
     BS.Status status = bu.move(site, bond.getIndex(), nextSite, toIndex);
     if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
       return false;
+
+    done = true;
+    return bs.isOk(status);
+  }
+
+  Bool insertSeq(Exec& exec, Bool& done) {
+    Index index = getBondIndex(exec, cSRC);
+    Index fromIndex = getBondIndex(exec, cDST);
+    done = false;
+
+    // Get first bondable
+    QBond& prevBond = exec.getBond(index);
+    if (!prevBond.isAttached()) {
+      // First atom not attached
+      done = true;
+      return false;
+    }
+    SiteNum prevSite = prevBond.getSiteNumber();
+    IBondable& prevBondable = (IBondable&) ew[prevSite];
+
+    // Make new atom
+    Atom atom = stu.make(stu.getSType(prevSite));
+    IBondable& bondable = (IBondable&) atom;
+
+    // Place new atom near the first one,
+    // hope it's close enough to the second
+    Radius radius = bu.maxDist(bondable, prevBondable);
+    EventWindowMisc ewm;
+    SiteNum site = ewm.findEmptySiteAround(prevSite, 1, radius);
+    if (site == SiteNum.maxof)
+      return false;
+    ew[site] = atom;
+
+    // Insert
+    BS.Status status = bu.insertSeq(prevSite, fromIndex, site);
+    if (!bs.isOk(status)) {
+      Empty empty;
+      ew[site] = empty;
+
+      if (status == BS.cINACCESSIBLE || status == BS.cDISTANCE_EXCEEDS_MAX)
+        return false;
+    }
 
     done = true;
     return bs.isOk(status);

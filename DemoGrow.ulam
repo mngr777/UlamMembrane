@@ -1,0 +1,53 @@
+local typedef BondStatus BS;
+local typedef EventWindow.SiteNum SiteNum;
+
+/**
+   Insert a membrane atom
+
+   \symbol DG
+   \color #caf7b7
+ */
+element DemoGrow : QMortal {
+  @Override Void behave() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
+    DebugUtils dbg;
+    EventWindow ew;
+    EventWindowMisc ewm;
+
+    Membrane membrane;
+
+    // Find membrane
+    WindowServices ws;
+    ws.reset(1, 2);
+    if (!ws.scan(au.getType(membrane))) {
+      dbg.print("Membrane atom not found");
+      die();
+      return;
+    }
+    SiteNum site = ws.getPick();
+
+    // Make atom to insert
+    SiteNum insertSite = ewm.findEmptySiteAround(site, 1u, 2u);
+    if (insertSite == SiteNum.maxof) {
+      dbg.print("No empty site around membrane atom");
+      die();
+      return;
+    }
+    ew[insertSite] = membrane;
+
+    // Insert new atom
+    BS.Status status = bu.insertSeq(site, Membrane.cNEXT, insertSite);
+    if (!bs.isOk(status)) {
+      dbg.print("Failed to insert membrane atom, status:");
+      dbg.print(bs.toString(status));
+
+      Empty empty;
+      ew[insertSite] = empty;
+    } else {
+      dbg.print("New membrane atom inserted");
+    }
+    die();
+  }
+}

@@ -3,16 +3,20 @@ local typedef EvalStatefulConditional ESC;
 local typedef STypeUtils STU;
 
 transient EvalConditional : Eval {
-  constant Symbol cIF                    = 0x1;
-  constant Symbol cIF_ZERO               = 0x2;
-  constant Symbol cIF_NOT_ZERO           = 0x3;
+  constant Symbol cIF                         = 0x1;
+  constant Symbol cIF_ZERO                    = 0x2;
+  constant Symbol cIF_NOT_ZERO                = 0x3;
 
-  constant Symbol cIF_ATTACHED           = 0x9;
-  constant Symbol cIF_ATTACHED_NEXT      = 0xa;
-  constant Symbol cIF_ATTACHED_NEXT_2    = 0xb;
-  constant Symbol cIF_OTHER_MATCHES_NEXT = 0xc;
+  constant Symbol cIF_ATTACHED                = 0x9;
+  constant Symbol cIF_ATTACHED_NEXT           = 0xa;
+  constant Symbol cIF_ATTACHED_NEXT_2         = 0xb;
+  constant Symbol cIF_OTHER_MATCHES_NEXT      = 0xc;
+  constant Symbol cIF_OTHER_NEXT_MATCHES_NEXT = 0xd;
 
-  constant Symbol cIF_MATCHES_FLAGS      = 0x11;
+  constant Symbol cIF_MATCHES_FLAGS           = 0x11;
+
+  constant Symbol cIF_ONE_IN                  = 0x21;
+  constant Symbol cIF_ONE_IN_FACT             = 0x22;
 
   constant Bool cDEBUG_COND = true;
 
@@ -60,9 +64,23 @@ transient EvalConditional : Eval {
       if (exec.mDebug) dbg.print("(if-other-matches-next)");
       cond = isOtherMatchingNext(exec);
 
+    } else if (symbol == cIF_OTHER_NEXT_MATCHES_NEXT) {
+      if (exec.mDebug) dbg.print("(if-other-next-matches-next)");
+      cond = isOtherNextMatchingNext(exec);
+
     } else if (symbol == cIF_MATCHES_FLAGS) {
       if (exec.mDebug) dbg.print("(if-matches-flags)");
       cond = isMatchingFlags(exec);
+
+    } else if (symbol == cIF_ONE_IN) {
+      if (exec.mDebug) dbg.print("(if-one-in)");
+      Random random;
+      cond = random.oneIn((Unsigned) exec.getInteger(cREG1));
+
+    } else if (symbol == cIF_ONE_IN_FACT) {
+      if (exec.mDebug) dbg.print("(if-one-in-fact)");
+      Random random;
+      cond = random.oneIn((Unsigned) (exec.getInteger(cREG1) * exec.getInteger(cREG2)));
 
     } else {
       dbg.print("EvalConditional.eval: unknown symbol");
@@ -105,6 +123,32 @@ transient EvalConditional : Eval {
       return false;
 
     return (otherBond.getSiteNumber() == nextBond.getSiteNumber(site));
+  }
+
+  Bool isOtherNextMatchingNext(Exec& exec) {
+    Index index = getBondIndex(exec, cSRC);
+    Index nextIndex = getBondIndex(exec, cDST);
+    Index otherIndex = (index == Exec.cINPUT) ? Exec.cOUTPUT : Exec.cINPUT;
+    Index otherNextIndex = getBondIndex(exec, cREG1);
+
+    QBond& bond = exec.getBond(index);
+    QBond& otherBond = exec.getBond(otherIndex);
+    if (!bond.isAttached() || !otherBond.isAttached())
+      return false;
+
+    SiteNum site = bond.getSiteNumber();
+    IBondable& bondable = (IBondable&) ew[site];
+    QBond& nextBond = bondable.getBond(nextIndex);
+    if (!nextBond.isAttached())
+      return false;
+
+    SiteNum otherSite = otherBond.getSiteNumber();
+    IBondable& otherBondable = (IBondable&) ew[otherSite];
+    QBond& otherNextBond = otherBondable.getBond(otherNextIndex);
+    if (!otherNextBond.isAttached())
+      return false;
+
+    return otherNextBond.getSiteNumber(otherSite) == nextBond.getSiteNumber(site);
   }
 
   Bool isMatchingFlags(Exec& exec) {

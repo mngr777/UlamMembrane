@@ -8,7 +8,10 @@ local typedef QBondableT(1) QBondable1;
 element DemoInitialMembraneBuilder : QStateT(3) + QBondable1 + QDiffusableT(100) + QMortal {
   typedef C2D.Dir Dir;
 
-  constant Unsigned(5) cSIDE_LENGTH = 20;
+  // constant Unsigned(5) cSIDE_LENGTH = 20;
+  // constant Unsigned(2) cSTEP_LENGTH = 2;
+
+  constant Unsigned(5) cSIDE_LENGTH = 16;
   constant Unsigned(2) cSTEP_LENGTH = 2;
 
   constant State cSTATE_MOVE_OUT       = 0;

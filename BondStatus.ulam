@@ -10,6 +10,7 @@ transient BondStatus {
   constant Status cNOT_BONDABLE           = 6;
   constant Status cDISTANCE_EXCEEDS_MAX   = 7;
   constant Status cNO_NEXT                = 8;
+  constant Status cSTYPE_DOESNT_MATCH     = 9;
 
   Bool isOk(Status status) {
     return status == cOK;

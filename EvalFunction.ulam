@@ -33,6 +33,7 @@ transient EvalFunction : Eval {
   constant Symbol cBUILD                = 0x2b;
   constant Symbol cMOVE_TO_OTHER        = 0x2c;
   constant Symbol cMOVE_TO_OTHER_NEXT   = 0x2d;
+  constant Symbol cINSERT_SEQ           = 0x2e;
 
   constant Symbol cACTIVATE             = 0x31;
   constant Symbol cDEACTIVATE           = 0x32;
@@ -155,6 +156,10 @@ transient EvalFunction : Eval {
     } else if (symbol == cMOVE_TO_OTHER_NEXT) {
       if (exec.mDebug) dbg.print("(move-to-other-next)");
       exec.setState(ESF.cSTATE_MOVE_TO_OTHER_NEXT);
+
+    } else if (symbol == cINSERT_SEQ) {
+      if (exec.mDebug) dbg.print("(insert-seq)");
+      exec.setState(ESF.cSTATE_INSERT_SEQ);
 
     } else if (symbol == cACTIVATE) {
       if (exec.mDebug) dbg.print("(activate)");

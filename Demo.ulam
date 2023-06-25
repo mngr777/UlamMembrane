@@ -146,6 +146,7 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
      +-(attach-to          ;; Find a membrane to attach to
          STU.cMEMBRANE)))
 
+   # Bootstrap:
     1 (with-input
     2   (if-attached
     3   +-(with-reg1
@@ -194,42 +195,71 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
    1. Next layer atoms are there,        2. Atoms of both layers are attached,
       but not attached to each other:       but one layer has extra atoms in between
                                             because of growth:
-   "other" layer:   o   o       -o---o       -o-------o-      -o       o-
-                    |   |        |   |        |       |   ->   |       |
-   current layer:  -o---o-  ->  -o---o-      -o---o---o-      -o---o---o
-                    |            |            |                |
-                    @            @            @                @
+   "other" layer:  -o   o       -o---o       -o-------o-      -o-------o-
+                    |   |        |   |        |       |        |       |
+   current layer:  -o---o-  ->  -o---o-      -o---o---o-  ->  -o---o---o
+                    |            |            |                    |
+                    @            @            @                    @
 
-      Connect the atoms in "other" layer.   Break up atoms in "other" layer, to be reduced to 1st case
-                                            on next iteration.
+      Connect the atoms in "other" layer.   Move to next atom, handle it later as case 3.
+
+    3. Atoms in "other" layer attached
+       incorrectly after atom was inserted
+       because of growth and "other"
+       layer atom was attached to it:
+
+   "other" layer:  -o-------o-      -o---o   o
+                    |   o   |        |   |   |
+                    |   |   |        |   |   |
+   current layer:  -o---o---o-  ->  -o---o---o
+                    |                    |
+                    @                    o
 
     1 (with-input
     2   (if-attached
     3   +-(prog2
     4   |   (with-dst-2
-    5   |     (if-attached-next                            ; Does current membrane atom have "other"?
+    5   |     (if-attached-next                                  ;; Does current membrane atom have "other"?
     6   |     +-(if
-    7   |     | +-(attach-other-to-next)                   ; * attach output bond to "other" membrane
+    7   |     | +-(attach-other-to-next)                         ; * attach output bond to "other" membrane
     8   |     | +-(with-dst-3
-    9   |     |     (if-attached-next                      ;   Is there next membrane atom?
+    9   |     |     (if-attached-next                            ;   Is there next membrane atom?
    10   |     |     +-(prog2
-   11   |     |     |   (traverse)                         ;   - move to next
+   11   |     |     |   (traverse)                               ;   - move to next
    12   |     |     |   (with-dst-2
-   13   |     |     |     (if-attached-next                ;     does next atom have "other" attached?
+   13   |     |     |     (if-attached-next                      ;     does next atom have "other" attached?
    14   |     |     |     +-(prog2
-   15   |     |     |     |   (traverse)                   ;     1. move to it
+   15   |     |     |     |   (traverse)                         ;     1. move to it
    16   |     |     |     |   (with-dst-1
-   17   |     |     |     |     (if-other-matches-next     ;     2. is it "next" for output?
-   18   |     |     |     |       (noop)                   ;        nothing to do then
-   19   |     |     |     |       (with-reg1               ;     3. connect membrane prev/next atoms
-   20   |     |     |     |         Membrane.cNEXT         ;        (break bonds if already bonded)
-   21   |     |     |     |         (connect-other-force)))))
-   22   |     |     |     +-(noop))))
-   23   |     |     +-(swap-input-output))))               ;   - no next atom, move to "other"
-   24   |     +-(traverse-3))                              ; * move to next
-   25   |   (detach-other))                                ; detach output bond
-   26   +-(attach-to                                       ;; Find a membrane to attach to
-   27       STU.cMEMBRANE)))
+   17   |     |     |     |     (if-other-matches-next           ;     2. is it "next" for output?
+   18   |     |     |     |       (noop)                         ;        nothing to do then
+   19   |     |     |     |       (with-reg1
+   20   |     |     |     |         Membrane.cNEXT
+   21   |     |     |     |         (if-other-next-matches-next        TODO: comment, remove redundant (with-reg1)
+   22   |     |     |     |           (swap-input-output)
+   23   |     |     |     |           (with-reg1                 ;     3. connect membrane prev/next atoms,
+   24   |     |     |     |             Membrane.cNEXT           ;        break bonds if already bonded [cases 1, 3]
+   25   |     |     |     |             (connect-other-force)))))))
+   26   |     |     |     +-(noop))))
+   27   |     |     +-(swap-input-output))))                     ;   - no next atom, move to "other"
+   28   |     +-(traverse-3)))                                    ; * move to next
+   29   |   (detach-other))                                      ; detach output bond
+   30   +-(attach-to                                             ;; Find a membrane to attach to
+   31       STU.cMEMBRANE)))
+
+   # Growth
+    1 (with-input
+    2   (if-attached
+    3   +-(with-dst-3
+    4   |   (if-attached-next    ;; Does current membrane atom have "next"?
+    5   |   +-(with-reg1         ;  * insert a new membrane atom in 1/10000 of cases
+    6   |   |   100
+    7   |   |   (if-one-in
+    8   |   |     (insert-seq)
+    9   |   |     (traverse)))
+   10   |   +-(traverse-2)))     ;  * no "next" atom move to "other"
+   11   +-(attach-to
+   12       STU.cMEMBRANE)))
 
  */
 transient Demo_SequenceData {
@@ -253,7 +283,7 @@ transient Demo_SequenceData {
 
   constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
-  constant Unsigned cSIZE = 68;
+  constant Unsigned cSIZE = 84;
 
   PackageData pd;
 
@@ -328,13 +358,31 @@ transient Demo_SequenceData {
     /* 18                             */ cFUNC | EF.cNOOP, 0,
     /* 19                             */ cBLCK | EB.cWITH_REG1, 0,
     /* 20                               */ cCNST | (Byte) Membrane.cNEXT, 0,
-    /* 21                               */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
-    /* 22                       */ cFUNC | EF.cNOOP, 0,
-    /* 23                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
-    /* 24           */ cFUNC | EF.cTRAVERSE_3, 0,
-    /* 25       */ cFUNC | EF.cDETACH_OTHER, 0,
-    /* 26   */ cFUNC | EF.cATTACH_TO, 0,
-    /* 27     */ cCNST | (Byte) STU.cMEMBRANE, 0
+    /* 21                               */ cCOND | EC.cIF_OTHER_NEXT_MATCHES_NEXT, 0,
+    /* 22                                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
+    /* 23                                 */ cBLCK | EB.cWITH_REG1, 0,
+    /* 24                                   */ cCNST | (Byte) Membrane.cNEXT, 0,
+    /* 25                                   */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
+    /* 26                       */ cFUNC | EF.cNOOP, 0,
+    /* 27                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
+    /* 28           */ cFUNC | EF.cTRAVERSE_3, 0,
+    /* 29       */ cFUNC | EF.cDETACH_OTHER, 0,
+    /* 30   */ cFUNC | EF.cATTACH_TO, 0,
+    /* 31     */ cCNST | (Byte) STU.cMEMBRANE, 0,
+
+    /* # Grow the membrane */
+    /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x3,
+    /*  2   */ cCOND | EC.cIF_ATTACHED, 0,
+    /*  3     */ cBLCK | EB.cWITH_DST_3, 0,
+    /*  4       */ cCOND | EC.cIF_ATTACHED_NEXT, 0,
+    /*  5         */ cBLCK | EB.cWITH_REG1, 0,
+    /*  6           */ cCNST | (Byte) 100, 0,
+    /*  7           */ cCOND | EC.cIF_ONE_IN, 0,
+    /*  8             */ cFUNC | EF.cINSERT_SEQ, 0,
+    /*  9             */ cFUNC | EF.cTRAVERSE, 0,
+    /* 10           */ cFUNC | EF.cTRAVERSE_2, 0,
+    /* 11     */ cFUNC | EF.cATTACH_TO, 0,
+    /* 12       */ cCNST | (Byte) STU.cMEMBRANE, 0
   };
 
   Datum getData(Unsigned i) {

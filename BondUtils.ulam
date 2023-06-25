@@ -4,6 +4,7 @@ transient BondUtils + Fail {
   typedef EventWindow.SiteNum SiteNum;
   typedef BondStatus.Status Status;
   typedef QBond.Index Index;
+  typedef STypeUtils.SType SType;
 
   constant QBond.Index cCOMMON = 0;
 
@@ -50,9 +51,12 @@ transient BondUtils + Fail {
     if (isAttached2 && !ew.isAccessible(siteOther2))
       return BS.cINACCESSIBLE;
 
+    Status status = BS.cOK;
+
     // Detach
-    Status status = bond1.detach(site1);
-    if (bs.isOk(status))
+    if (isAttached1 && bs.isOk(status))
+      status = bond1.detach(site1);
+    if (isAttached2 && bs.isOk(status))
       status = bond2.detach(site2);
 
     // Attach
@@ -286,6 +290,62 @@ transient BondUtils + Fail {
       if (isAttached2 && !bs.isOk(bond2.attach(site, index2, siteOther2, indexOther2)))
         fail("BondUtils.swap: failed to re-attach 2nd bond");
     }
+    return status;
+  }
+
+  /**
+     Given an atom at `prevSite` and a bond index, insert the atom at `site`
+     between the first atom and the atom attached to the bond.
+   */
+  Status insertSeq(SiteNum site, Index index, SiteNum insertSite) {
+    STypeUtils stu;
+
+    // Check type of the atom to insert
+    SType stype = stu.getSType(site);
+    if (stype != stu.getSType(insertSite))
+      return BS.cSTYPE_DOESNT_MATCH;
+
+    // Get bondable, check if next atom is attached
+    IBondable& bondable = (IBondable&) ew[site];
+    QBond& bond = bondable.getBond(index);
+    if (!bond.isAttached())
+      return BS.cNOT_ATTACHED;
+    Index prevIndex = bond.getIndex(); // corresponding bond index of second atom
+
+    // Check if atom to insert already uses the bonds we need
+    IBondable& insertBondable = (IBondable&) ew[insertSite];
+    if (insertBondable.getBond(index).isAttached())
+      return BS.cIS_ATTACHED;
+    if (insertBondable.getBond(prevIndex).isAttached())
+      return BS.cIS_ATTACHED;
+
+    // Check attached atom's accessibility and type
+    SiteNum nextSite = bond.getSiteNumber(site);
+    if (!ew.isAccessible(nextSite))
+      return BS.cINACCESSIBLE;
+    if (stype != stu.getSType(nextSite))
+      return BS.cSTYPE_DOESNT_MATCH;
+
+    // Detach
+    Status status = bond.detach(site);
+
+    // Attach to first atom
+    if (bs.isOk(status))
+      status = attach(site, index, insertSite, prevIndex);
+
+    // Attach to second atom
+    if (bs.isOk(status))
+      status = attach(insertSite, index, nextSite, prevIndex);
+
+    if (!bs.isOk(status)) {
+      // Try and restore the original bond
+      insertBondable.getBond(index).detach(insertSite);
+      insertBondable.getBond(prevIndex).detach(insertSite);
+
+      if (!bs.isOk(attach(site, index, nextSite, prevIndex)))
+        fail("BondUtils.insertSeq: failed to restore original bond");
+    }
+
     return status;
   }
 }
