@@ -1,5 +1,8 @@
 local typedef STypeUtils STU;
 
+/**
+   Calculates how much two atom are attracted/repulsed by each other.
+ */
 transient AttractionUtils {
   typedef Int Attraction;
   typedef STypeUtils.SType SType;
@@ -21,7 +24,7 @@ transient AttractionUtils {
     Unsigned distance = coord1.manhattanDistance(coord2);
 
     // NOTE:
-    // * this can explode quickly, but then we can use
+    // * this can explode quickly, but then we can then use
     //   more broad categories of atoms including multiple stypes
     // * the numbers are made up
 

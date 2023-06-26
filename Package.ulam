@@ -1,6 +1,15 @@
 local typedef QBondableT(4) QBondable4;
 
 /**
+   Carries two DataUtils.Datum values.
+
+   Package atoms are bonded into either sequences (data) or trees (executable).
+
+   Atoms in a sequence can be tagged to mark a beginning of a program, which can
+   be built by attaching TreeBuilder to the tagged atom.
+
+   In this demo, first and last sequence atoms are connected to form a loop.
+
    \symbol P
    \color #008100
    \symmetry all

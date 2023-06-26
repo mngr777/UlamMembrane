@@ -1,4 +1,16 @@
 /**
+   Membrane atoms can form a 2-layer membrane using 3 bonds:
+
+      next       prev
+   --o---------------o--
+     | other         | other
+     |               |
+     | other         | other
+   --o---------------o--
+      next       prev
+
+  The 4th bond is used by agents building and maintaining the membrane
+
    \color #0054d2
    \symmetry all
  */

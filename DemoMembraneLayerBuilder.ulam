@@ -1,6 +1,8 @@
 /**
    Build second membrane layer, hardcoded for testing
 
+   NOTE: this is not exactly the same as the program used in demo.
+
    \symbol DL
    \color #e7daf7
  */

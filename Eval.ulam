@@ -1,3 +1,6 @@
+/**
+   Base class for Eval* helpers.
+ */
 transient Eval {
   typedef EventWindow.SiteNum SiteNum;
   typedef WindowServices.Radius Radius;

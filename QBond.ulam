@@ -1,3 +1,8 @@
+/**
+   Half a bond between two bondable atoms.
+
+   Stores the site number of bonded atom and an index of corresponding bond.
+ */
 quark QBond : Fail {
   typedef BondStatus.Status Status;
   typedef EventWindow.SiteNum SiteNum;

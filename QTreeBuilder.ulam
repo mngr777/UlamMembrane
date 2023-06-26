@@ -3,11 +3,19 @@ local typedef PackageData.Arity Arity;
 
 local constant Bool cDEBUG = true;
 
-// NOTE: QBondableT is in the quark because implementing
+// NOTE: QBondableT(2) is in the quark because implementing
 // `virtual IBondable& getBondable() { return self; }`
-// in derived class somehow leads to `EventWindow` class being hazy in derived class.
+// in derived class somehow leads to `EventWindow` class being hazy
+// (meaning compiler cannot determine the type) in derived class.
 // Unfortunately I couldn't reproduce this issue separately.
 
+/**
+   State machine for building executable trees from non-executable
+   sequences of Package atoms.
+
+   Impementing this functionality in a quark allows derived classes
+   to add more states (up to 16 total, should be enough) and actions.
+ */
 quark QTreeBuilder : QStateT(4) + QBondableT(2) {
   typedef EventWindow.SiteNum SiteNum;
 

@@ -1,3 +1,9 @@
+/**
+   Datum type combines 1 byte of data and 1 byte of metadata into a single
+   16-bit value.
+
+   See also PackageData.
+ */
 transient DataUtils {
   typedef Bits(16) Datum;
   typedef Bits(8) Byte;

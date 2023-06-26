@@ -1,7 +1,7 @@
 local typedef EventWindow.SiteNum SiteNum;
 
 /**
-   Toggle debug on/off for first (by site number) closest Exec
+   Toggle debug flag for first (by site number) closest Exec
 
    \symbol ED
  */

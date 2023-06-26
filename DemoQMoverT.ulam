@@ -1,7 +1,7 @@
 local typedef BondStatus BS;
 
 /**
-   Attach to package or membrane and move it
+   Attach to a membrane atome and move it
  */
 quark DemoQMoverT(C2D.Dir cDIR) : QBondableT(2) + QMortal {
   @Override Void behave() {

@@ -135,7 +135,7 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
 
 
 /**
-   Basic crawler example:
+   Basic membrane crawler example (not used):
    (with-input
      (if-attached
      +-(widh-dst           ;; Move to "next" if possible, otherwise try "other"
@@ -173,6 +173,9 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
    24       ES.cNO_EXEC)))
 
    # Build second membrane layer atoms:
+   If a membrane atom is not attached to another atom with "other" bond,
+   then build a new atom and attach it.
+
     1 (with-input
     2  (if-attached
     3  +-(with-dst-2                    ; "other" membrane bond

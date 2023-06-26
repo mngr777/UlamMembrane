@@ -1,7 +1,9 @@
 local typedef BondStatus BS;
 
 /**
-   Membrane repair, hardcoded for testing
+   Membrane repair, hardcoded for testing.
+
+   NOTE: this is not exactly the same as the program used in demo.
 
    \symbol DR
    \color #e7daf7

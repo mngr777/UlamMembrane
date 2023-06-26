@@ -1,3 +1,6 @@
+/**
+   Return statuses for bond operations
+ */
 transient BondStatus {
   typedef Unsigned(4) Status;
 

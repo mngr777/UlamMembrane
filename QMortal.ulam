@@ -1,5 +1,9 @@
+/**
+   Note that
+   1) `die` always kills the atom at origin, atoms should only call it on themselves;
+   2) atom data cannot be accessed after calling `die`.
+ */
 quark QMortal {
-  // NOTE: no killing allowed, only suicide
   Void die() {
     EventWindow ew;
 

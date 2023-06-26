@@ -1,6 +1,9 @@
 local typedef BondStatus BS;
 local typedef BondUtils BU;
 
+/**
+   Helper for evaluating functions that may require multiple retries.
+ */
 transient EvalStatefulFunction : Eval {
   typedef Exec.State State;
 

@@ -1,5 +1,8 @@
 local typedef STypeUtils STU;
 
+/**
+   Used by other Eval* helpers to check if atom matches given search flags.
+ */
 transient EvalSearch {
   typedef DataUtils.Byte Byte;
   typedef DataUtils.Datum Datum;

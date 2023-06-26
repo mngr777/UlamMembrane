@@ -1,6 +1,9 @@
 local typedef EvalConditional EC;
 local typedef PackageData PD;
 
+/**
+   Helper for evaluating conditionals that may require multiple retries.
+ */
 transient EvalStatefulConditional : Eval {
   typedef Exec.State State;
 

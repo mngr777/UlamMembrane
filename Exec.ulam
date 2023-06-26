@@ -4,6 +4,50 @@ local typedef EvalStatefulFunction ESF;
 local typedef PackageData PD;
 
 /**
+   Executes attached program tree (built from Package atoms with executable flag).
+
+            o
+          /   \
+         o     o--@
+        / \    |
+       o   o   o
+
+   Exec atom crawls through program tree in left/right/parent order.
+
+   * if expression can be evaluated immediately, Exec stores the result
+   in Package's aux. data and sets it's `final` flag (the flag means that
+   the subtree is fully evaluated).
+
+   * if expression requires an argument, Exec moves to the left subtree.
+   The parent expression can be evaluated when Exec moves back up, since
+   both parent and child (which now has it's result value stored) are
+   accessible at that time.
+
+   * if expression requires two arguments, the result of evaluating the
+   left subtree is stored in parent Package's aux. with `final` flag unset.
+   This way both arguments are accessible when Exec moves back to parent
+   after evaluating the right subtree.
+
+   * Conditionals (e.g. `(if-some-condition (do-stuff) (do-other-stuff))`)
+   typically require zero arguments to evaluate the condition. In this case,
+   first the condition is evaluated and selected branch number is stored
+   in Package's aux as non-final value, then Exec evaluates.selected subtree
+   and stores the result as final value.
+
+   If an argument is required (e.g. `(if (condition) (do-stuff))`), the execution
+   is similar, Exec just needs to evaluate condition subtree first and there's
+   only one branch to select or discard.
+
+   * Context blocks [is it a good name?] (e.g. `(with-reg1 (value) (do-stuff))`)
+   have to store register value in Package's aux. data and then restore it on
+   exit, so this has to be handled as a special case.
+
+   * Some functions and contitions may require multiple attemts to evaluate,
+   since atoms they need to access may sometimes be outside event window.
+   In this case Exec's state is set to corresponding value (defined in
+   EvalStatefulFunction and EvalStatefulConditional) and the operation is
+   retried until it succeeds or fails.
+
    \symbol Ex
    \color #85c9e9
  */
@@ -77,7 +121,7 @@ element Exec : QStateT(6) + QBondableT(4) + QDiffusableT(100) {
       exec();
 
     } else if (isState(cSTATE_DONE)) {
-      reset();
+      reset(); // restart program automatically for this demo
 
     } else if ((ESC.cSTATE_FIRST <= getState() && getState() <= ESC.cSTATE_LAST)) {
       execStateful();

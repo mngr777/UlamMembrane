@@ -2,6 +2,17 @@ local typedef EvalSearch ES;
 local typedef EvalStatefulConditional ESC;
 local typedef STypeUtils STU;
 
+/**
+   Helper for evaluating conditional statements, e.g.
+
+   (if-zero            ; if `reg1` register value is 0
+     (do-stuff)
+     (do-other-stuff))
+
+   Some contitionals may require multiple retries. In this case
+   Exec is set to a corresponding state and condition will be
+   later evaluated by EvalStatefulConditional.
+ */
 transient EvalConditional : Eval {
   constant Symbol cIF                         = 0x1;
   constant Symbol cIF_ZERO                    = 0x2;

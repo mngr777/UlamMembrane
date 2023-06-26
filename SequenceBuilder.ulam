@@ -1,6 +1,10 @@
 local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
 
+/**
+   Builds a sequence while keeping it attached to `builder` atom,
+   used to set up initial conditions for demo.
+ */
 transient SequenceBuilder + Fail {
   typedef QBond.Index Index;
   typedef DataUtils.Datum Datum;

@@ -1,3 +1,7 @@
+/**
+   Helper for misc. EventWindow functions.
+   Actually only used for finding empty sites.
+ */
 transient EventWindowMisc {
   typedef CoordUtils.Orientation Orientation;
   typedef EventWindow.SiteNum SiteNum;

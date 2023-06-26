@@ -1,4 +1,7 @@
 /**
+   Non-diffusable atom that can be attached to a diffusable one to hold it in place.
+   Used by DemoInitialMembraneBuilder to build the 1-layer membrane.
+
    \symbol An
    \color #205b7c
  */

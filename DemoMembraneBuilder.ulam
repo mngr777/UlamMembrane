@@ -4,7 +4,9 @@ local typedef EventWindow.SiteNum SiteNum;
 
 /**
    Build membrane around looped non-executable package sequence.
-   NOTE: This doesn't work at all.
+
+   NOTE: This doesn't work at all. It was supposed to be used in test to wrap
+   a copy of data loop (see DemoCopy) in a membrane.
 
    \symbol DM
    \color #85c9e9

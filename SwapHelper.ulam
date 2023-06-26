@@ -1,3 +1,6 @@
+/**
+   Swaps two atoms and updates their bonds.
+ */
 transient SwapHelper {
   typedef EventWindow.SiteNum SiteNum;
 

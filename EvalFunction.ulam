@@ -2,6 +2,13 @@ local typedef EvalSearch ES;
 local typedef EvalStatefulFunction ESF;
 local typedef BondUtils BU;
 
+/**
+   Helper for evaluating functions.
+
+   Some functions may require multiple retries. In this case
+   Exec is set to a corresponding state and the function is
+   later evaluated by EvalStatefulFunction
+ */
 transient EvalFunction : Eval {
   constant Symbol cSET_1                = 0x01;
   constant Symbol cSET_2                = 0x02;

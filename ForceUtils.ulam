@@ -1,6 +1,13 @@
 local typedef C2D.Coord Coord;
 local typedef EventWindow.SiteNum SiteNum;
 
+/**
+   Calculates vector of force acting on the atom at event window origin.
+   This value is used in `QDiffusableT.diffuse` to select a site to diffuse to.
+
+   The method of calculation (e.g. here force if inversely proportional to distance)
+   is not really important, this is just something that works for the demo.
+ */
 transient ForceUtils {
   typedef AttractionUtils.Attraction Attraction;
 

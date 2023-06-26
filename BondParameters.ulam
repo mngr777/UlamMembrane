@@ -1,4 +1,7 @@
 /**
+   Automatically detaching broken bonds allows removing bonded atoms
+   without errors cascading.
+
    \symbol BP
  */
 element BondParameters {

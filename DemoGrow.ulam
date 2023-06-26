@@ -2,7 +2,7 @@ local typedef BondStatus BS;
 local typedef EventWindow.SiteNum SiteNum;
 
 /**
-   Insert a membrane atom
+   Insert a membrane atom (test)
 
    \symbol DG
    \color #caf7b7

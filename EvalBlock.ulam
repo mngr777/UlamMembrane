@@ -1,3 +1,10 @@
+/**
+   Helper for evaluating block statements, e.g.
+
+   (with-input     ; set `src` register to Exec.cINPUT
+      (do-stuff)
+   )               ; restore `src` register to previous value
+ */
 transient EvalBlock : Eval {
   constant Symbol cWITH_INPUT  = 0x1;
   constant Symbol cWITH_OUTPUT = 0x2;

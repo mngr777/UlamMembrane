@@ -2,6 +2,8 @@ local typedef BondStatus BS;
 local typedef QBondableT(1) QBondable1;
 
 /**
+   Builds initial 1-layer membrane around program data loop.
+
    \symbol DI
    \color #85c9e9
  */
