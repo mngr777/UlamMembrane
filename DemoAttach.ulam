@@ -17,7 +17,7 @@ element DemoAttach : QMortal {
     // What the maximum bond distance?
     Package pkg;
     Membrane membrane;
-    Unsigned maxDist = bu.maxDist(pkg, membrane);
+    Unsigned dist = bu.maxDist(pkg, membrane);
 
     // Find package (at distance 2)
     WindowServices ws;
@@ -36,7 +36,7 @@ element DemoAttach : QMortal {
 
       // Is it close enough to bond?
       C2D coord = ew.getCoordRaw(site);
-      if (packageCoord.manhattanDistance(coord) > maxDist)
+      if (packageCoord.manhattanDistance(coord) > dist)
         continue;
 
       if (bs.isOk(bu.attach(packageSite, Package.cCOMMON, site, Membrane.cCOMMON)))

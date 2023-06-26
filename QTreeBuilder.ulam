@@ -33,7 +33,8 @@ quark QTreeBuilder : QStateT(4) + QBondableT(2) {
 
   IBondable& getBondable() {
     EventWindow ew;
-    return (IBondable&) ew[0];
+    IBondable& bondable = (IBondable&) ew[0];
+    return bondable;
   }
 
   Void step() {

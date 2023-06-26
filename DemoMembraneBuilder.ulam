@@ -86,8 +86,8 @@ element DemoMembraneBuilder : QStateT(3) + QBondableT(2) + QDiffusableT(100) + Q
 
     // Place membrane atom
     Membrane membrane;
-    EventWindowMisc.Radius maxDist = bu.maxDist(self, membrane);
-    SiteNum site = ewm.findEmptySiteAroundOrient(packageCoord, nextPackageCoord, 1, maxDist, CU.cCCW);
+    EventWindowMisc.Radius dist = bu.maxDist(self, membrane);
+    SiteNum site = ewm.findEmptySiteAroundOrient(packageCoord, nextPackageCoord, 1, dist, CU.cCCW);
     if (site == SiteNum.maxof)
       return;
     ew[site] = membrane;

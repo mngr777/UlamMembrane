@@ -190,10 +190,10 @@ transient BondUtils + Fail {
     QBond& objBond = obj.getBond(index);
 
     // Attachment
-    Bool isAttached = objBond.isAttached(); // is there anything to replace?
+    Bool attached = objBond.isAttached(); // is there anything to replace?
     SiteNum attachmentSite = objBond.getSiteNumber(); // remember in case we need to re-attach
     Index attachmentIndex = objBond.getIndex();       // +
-    if (isAttached && !ew.isAccessible(attachmentSite))
+    if (attached && !ew.isAccessible(attachmentSite))
       return BS.cINACCESSIBLE;
 
     // Substitute
@@ -205,7 +205,7 @@ transient BondUtils + Fail {
     Status status = BS.cOK;
 
     // Detach
-    if (isAttached) {
+    if (attached) {
       status = objBond.detach(site);
       if (!bs.isOk(status))
         return status;
@@ -214,7 +214,7 @@ transient BondUtils + Fail {
     // Attach the substitute
     status = objBond.attach(site, index, subSite, subIndex);
     if (!bs.isOk(status)) {
-      if (isAttached) {
+      if (attached) {
         // re-attach
         if (!bs.isOk(objBond.attach(site, index, attachmentSite, attachmentIndex)))
           fail("BondUtils.replace: failed to re-attach"); // shouldn't happen
@@ -253,16 +253,16 @@ transient BondUtils + Fail {
       return BS.cOTHER_IS_ATTACHED;
 
     // What's the object's bond attached to currently?
-    Bool isAttached = objBond.isAttached();
+    Bool attached = objBond.isAttached();
     SiteNum currentSite = objBond.getSiteNumber(site); // remember in case we need to re-attach
     Index currentIndex = objBond.getIndex();           // +
-    if (isAttached && !ew.isAccessible(currentSite))
+    if (attached && !ew.isAccessible(currentSite))
       return BS.cINACCESSIBLE;
 
     Status status = BS.cOK;
 
     // Detach
-    if (isAttached) {
+    if (attached) {
       status = objBond.detach(site);
       if (!bs.isOk(status))
         return status;
@@ -271,7 +271,7 @@ transient BondUtils + Fail {
     // Attach to target
     status = objBond.attach(site, index, siteTo, indexTo);
     if (!bs.isOk(status)) {
-      if (isAttached) {
+      if (attached) {
         // re-attach
         if (!bs.isOk(objBond.attach(site, index, currentSite, currentIndex)))
           fail("BondUtils.move: failed to re-attach"); // shouldn't happen

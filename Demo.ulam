@@ -202,7 +202,7 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
 
    # Repair the membrane:
 
-   Here we assume that growth happens rarely and ignore other possible cases.
+   Here we assume that both growth and defects happen rarely and ignore other possible cases.
 
 
    1. Next layer atoms are there,                2. Atoms of both layers are attached,
@@ -317,7 +317,8 @@ transient Demo_SequenceData {
   typedef EvalConditional EC;
   typedef EvalFunction EF;
 
-  typedef Bits(Type.sizeof + Byte.sizeof) Item ;
+  // typedef Bits(Type.sizeof + Byte.sizeof) Item;
+  typedef Bits(10) Item;
 
   constant Item cBLCK = (Item) PD.cTYPE_BLOCK << Byte.sizeof;
   constant Item cFUNC = (Item) PD.cTYPE_FUNCTION << Byte.sizeof;
@@ -477,22 +478,22 @@ transient Demo_SequenceData {
 }
 
 
-/**
-   \symbol MS
- */
-element DemoMoverSouth : DemoQMoverT(0) {}
+// /**
+//    \symbol MS
+//  */
+// element DemoMoverSouth : DemoQMoverT(0) {}
 
-/**
-   \symbol ME
- */
-element DemoMoverEast : DemoQMoverT(2) {}
+// /**
+//    \symbol ME
+//  */
+// element DemoMoverEast : DemoQMoverT(2) {}
 
-/**
-   \symbol MN
- */
-element DemoMoverNorth : DemoQMoverT(4) {}
+// /**
+//    \symbol MN
+//  */
+// element DemoMoverNorth : DemoQMoverT(4) {}
 
-/**
-   \symbol MW
- */
-element DemoMoverWest : DemoQMoverT(6) {}
+// /**
+//    \symbol MW
+//  */
+// element DemoMoverWest : DemoQMoverT(6) {}

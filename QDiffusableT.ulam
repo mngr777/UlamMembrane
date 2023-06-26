@@ -47,16 +47,16 @@ quark QDiffusableT(IDiffusable.Diffusability cDIFFUSABILITY, WindowServices.Radi
     ForceUtils fu;
     MDist mdist;
 
-    C2D force = fu.force();
+    C2D forceVect = fu.force();
 
     WindowServices ws;
     ws.reset(1, getDiffusionRadius());
     for (Int i = ws.next(); i >= 0; i = ws.next()) {
       SiteNum site = (SiteNum) i;
       C2D coord = ew.getCoordRaw(site);
-      Int dot = force.dot(coord);
-      if (dot >= 0)
-        ws.hit(0, (Unsigned) dot + 1u);
+      Int dotProd = forceVect.dot(coord);
+      if (dotProd >= 0)
+        ws.hit(0, (Unsigned) dotProd + 1u);
     }
     return ws.getPick();
   }

@@ -205,15 +205,15 @@ element DemoInitialMembraneBuilder : QStateT(3) + QBondable1 + QDiffusableT(100)
 
     // Get anchor
     QBond& anchorBond = membrane.getBond(Membrane.cOTHER);
-    Bool isAttached = anchorBond.isAttached();
-    SiteNum anchorSite = isAttached
+    Bool attached = anchorBond.isAttached();
+    SiteNum anchorSite = attached
       ? anchorBond.getSiteNumber(membraneSite)
       : SiteNum.maxof;
 
-    if (isAttached && !ew.isAccessible(anchorSite))
+    if (attached && !ew.isAccessible(anchorSite))
       return;
 
-    if (!isAttached || !(ew[anchorSite] is Anchor)) {
+    if (!attached || !(ew[anchorSite] is Anchor)) {
       // no anchor, move to next membrane atom
       bu.traverse(0, 0, Membrane.cNEXT);
       return;
