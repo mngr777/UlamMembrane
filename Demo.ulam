@@ -148,28 +148,30 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
 
 
    # Bootstrap:
+   Attach TreeBuilder to active tagged packages (tags mark beginning of program),
+   mark these packages as inactive.
 
     1 (with-input
     2   (if-attached
-    3   +-(with-reg1
+    3   +-(with-reg1                              ;; Is the package tagged and active?
     4   |   ES.cTAGGED | ES.cACTIVE
     5   |   (if-matches-flags
     6   |   +-(prog2
     7   |   |   (prog2
-    8   |   |     (deactivate)
-    9   |   |     (traverse-2))
-   10   |   |   (with-output
+    8   |   |     (deactivate)                    ;  - deactivate
+    9   |   |     (traverse-2))                   ;  - move to next package to free the bond for TreeBuilder
+   10   |   |   (with-output                      ;  - build TreeBuilder (the atom will be attached to output)
    11   |   |     (if
    12   |   |       (with-reg1
    13   |   |         STU.cTREE_BUILDER
    14   |   |         (with-dst
    15   |   |           TreeBuilder.cSEQUENCE
    16   |   |           (build)))
-   17   |   |       (with-dst-1
+   17   |   |       (with-dst-1                   ;  - attach TreeBuilder to the previous package
    18   |   |         (with-reg1
    19   |   |           Package.cCOMMON
    20   |   |           (move-to-other-next)))))
-   21   |   +-(traverse-2)))
+   21   |   +-(traverse-2)))                      ; otherwise move to next package
    22   +-(attach-to-flags
    23       STU.cPACKAGE
    24       ES.cNO_EXEC)))
@@ -199,6 +201,9 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
 
 
    # Repair the membrane:
+
+   Here we assume that growth happens rarely and ignore other possible cases.
+
 
    1. Next layer atoms are there,                2. Atoms of both layers are attached,
       but not attached to each other:               but one layer has extra atoms in between
@@ -273,7 +278,19 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
    32       STU.cMEMBRANE)))
 
 
-   # Growth
+   # Growth:
+
+   Sometimes insert a new membrane atom between current and next.
+   (Constant growth rate doesn't really make sense, but we don't have any feedback
+   mechanisms here.)
+ 
+   TODO: maybe add checks to avoid this configuration:
+
+   -o--------o-
+    |  o  o  |
+    |  |  |  |
+   -o--o--o--o-
+   
     1 (with-input
     2   (if-attached
     3   +-(with-dst-3
