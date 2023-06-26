@@ -235,17 +235,18 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
    18   |     |     |     |       (noop)                         ;        nothing to do then
    19   |     |     |     |       (with-reg1
    20   |     |     |     |         Membrane.cNEXT
-   21   |     |     |     |         (if-other-next-matches-next        TODO: comment, remove redundant (with-reg1)
+   21   |     |     |     |         (if-other-next-matches-next        TODO: fix comments
    22   |     |     |     |           (swap-input-output)
-   23   |     |     |     |           (with-reg1                 ;     3. connect membrane prev/next atoms,
-   24   |     |     |     |             Membrane.cNEXT           ;        break bonds if already bonded [cases 1, 3]
-   25   |     |     |     |             (connect-other-force)))))))
-   26   |     |     |     +-(noop))))
-   27   |     |     +-(swap-input-output))))                     ;   - no next atom, move to "other"
-   28   |     +-(traverse-3)))                                    ; * move to next
-   29   |   (detach-other))                                      ; detach output bond
-   30   +-(attach-to                                             ;; Find a membrane to attach to
-   31       STU.cMEMBRANE)))
+   23   |     |     |     |           (prog2                     ;     3. connect membrane prev/next atoms,
+   24   |     |     |     |             (connect-other-force)    ;        break bonds if already bonded [cases 1, 3]
+   25   |     |     |     |             (with-dst-2              ;     move to other
+   26   |     |     |     |               (traverse))))))))
+   27   |     |     |     +-(noop))))
+   28   |     |     +-(swap-input-output))))                     ;   - no next atom, move to "other"
+   29   |     +-(traverse-3)))                                    ; * move to next
+   30   |   (detach-other))                                      ; detach output bond
+   31   +-(attach-to                                             ;; Find a membrane to attach to
+   32       STU.cMEMBRANE)))
 
    # Growth
     1 (with-input
@@ -283,7 +284,7 @@ transient Demo_SequenceData {
 
   constant Item cACTIVE = (Item) 1 << Byte.sizeof;
 
-  constant Unsigned cSIZE = 84;
+  constant Unsigned cSIZE = 85;
 
   PackageData pd;
 
@@ -360,15 +361,16 @@ transient Demo_SequenceData {
     /* 20                               */ cCNST | (Byte) Membrane.cNEXT, 0,
     /* 21                               */ cCOND | EC.cIF_OTHER_NEXT_MATCHES_NEXT, 0,
     /* 22                                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
-    /* 23                                 */ cBLCK | EB.cWITH_REG1, 0,
-    /* 24                                   */ cCNST | (Byte) Membrane.cNEXT, 0,
-    /* 25                                   */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
-    /* 26                       */ cFUNC | EF.cNOOP, 0,
-    /* 27                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
-    /* 28           */ cFUNC | EF.cTRAVERSE_3, 0,
-    /* 29       */ cFUNC | EF.cDETACH_OTHER, 0,
-    /* 30   */ cFUNC | EF.cATTACH_TO, 0,
-    /* 31     */ cCNST | (Byte) STU.cMEMBRANE, 0,
+    /* 23                                 */ cFUNC | EF.cPROG2, 0,
+    /* 24                                   */ cFUNC | EF.cCONNECT_OTHER_FORCE, 0,
+    /* 25                                   */ cBLCK | EB.cWITH_DST_2, 0,
+    /* 26                                     */ cFUNC | EF.cTRAVERSE, 0,
+    /* 27                       */ cFUNC | EF.cNOOP, 0,
+    /* 28                 */ cFUNC | EF.cSWAP_INPUT_OUTPUT, 0,
+    /* 29           */ cFUNC | EF.cTRAVERSE_3, 0,
+    /* 30       */ cFUNC | EF.cDETACH_OTHER, 0,
+    /* 31   */ cFUNC | EF.cATTACH_TO, 0,
+    /* 32     */ cCNST | (Byte) STU.cMEMBRANE, 0,
 
     /* # Grow the membrane */
     /*  1 */ cBLCK | EB.cWITH_INPUT, cACTIVE | (Tag) 0x3,
