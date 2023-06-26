@@ -295,7 +295,7 @@ element Demo : QStateT(3) + QBondableT(2) + QMortal {
     2   (if-attached
     3   +-(with-dst-3
     4   |   (if-attached-next    ;; Does current membrane atom have "next"?
-    5   |   +-(with-reg1         ;  * insert a new membrane atom in 1/10000 of cases
+    5   |   +-(with-reg1         ;  * insert a new membrane atom in 1/100 of cases
     6   |   |   100
     7   |   |   (if-one-in
     8   |   |     (insert-seq)
