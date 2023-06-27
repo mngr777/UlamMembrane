@@ -42,6 +42,6 @@ More details on how program tree is executed: [Exec.ulam:6](https://github.com/m
 
 # Physics
 
-Atoms can attract and repulse each other, also the bonds don't like to be stretched to full length (see [ForceUtils.ulam](https://github.com/mngr777/UlamMembrane1/blob/master/ForceUtils.ulam)). When a new site is selected for a diffusable atom, first all the forces acting on the atom are summed up and possible sites are weighed by how similar their positions are to the resulting vector (see [QDiffusableT.ulam:45](https://github.com/mngr777/UlamMembrane1/blob/master/QDiffusableT.ulam#L45)).
+Atoms can attract and repulse each other, also the bonds don't like to be stretched to full length (see [ForceUtils.ulam](https://github.com/mngr777/UlamMembrane1/blob/master/ForceUtils.ulam)). When a new site is selected for a diffusable atom, first all the forces acting on the atom are summed up and possible sites are weighed by how similar their positions are to the resulting vector (see [QDiffusableT.ulam:45](https://github.com/mngr777/UlamMembrane1/blob/master/QDiffusableT.ulam#L45)). Exact values and calculations are not very important, just seem to be good enough for the demo.
 
 `Membrane` atoms repulse other `Membrane` atoms and `Package`s. This allows the membrane to keep the contents inside and prevents it from collapsing.
