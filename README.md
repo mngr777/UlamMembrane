@@ -15,7 +15,7 @@ YouTube videos:
 On Ubuntu, intstall `ulam` package (it contains both ULAM and MFM) from PPA, see [ULAM Tutorial](https://github.com/elenasa/ULAM/wiki/Ulam-Programming-Language).  
 Or install ULAM and MFM from source: http://robust.cs.unm.edu/doku.php?id=dev:install_ulam. Note that for `develop` branch, `Makefile.local.mk` should use `$ULAM_ROOT_DIR` instead of `$ROOT_DIR`.
 
-After that, running `make` in repo directory will compile `*.ulam` source files and run the result in MFM, then place a single `Demo` atom.
+After that, running `make` in repo directory will compile `*.ulam` source files and run the result in MFM. Place a single `Demo` atom to start the demo.
 
 # Setting initial conditions
 ![Overview](images/init.png)
