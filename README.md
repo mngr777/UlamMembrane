@@ -17,3 +17,17 @@ Hardcoded parts are building program trees (`TreeBuilder` element) and setting i
 Program trees and data sequences are both built from `Package` atoms, packages in a tree have `exec` flag set in their data. Trees are built from sequences by `TreeBuilder` and executed by `Exec`. After a tree is complete, `TreeBuilder` attaches `Exec` atom to the tree and deletes itself.
 
 All programs are stored in program loop. Each program sequence starts with a `Package` atom that has a 1-byte tag value assigned and can be marked as active or inactive (these are marked with a green or red diagonal line in the picture above). The first program is used to build other ones, bootstrapping the whole thing: the agent crawls along the loop, attaches `TreeBuilder`s to active tagged atoms and then deactivates them. The idea was that it can later receive a signal with a tag value to re-activate tagged `Package`s and build more copies, but this is not used in the demo. Other programs are used to build, maintain and grow the membrane.
+
+Attaching membrane atoms for 2nd layer:
+
+![Overview](images/build-other.png)
+
+Repairing the membrane using attached atoms:
+
+![Overview](images/repair.png)
+
+The last program randomly inserts atoms in the membrane, the other two then attach 2nd layer atom to it and fix the bonds, growing the membrane.
+
+Listing of all the programs used in the demo: [Demo.ulam:137](https://github.com/mngr777/UlamMembrane1/blob/master/Demo.ulam#L137).
+
+More details on how program tree is executed: [Exec.ulam:6](https://github.com/mngr777/UlamMembrane1/blob/master/Exec.ulam#L6).
