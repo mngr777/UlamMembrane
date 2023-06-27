@@ -28,6 +28,8 @@ Repairing the membrane using attached atoms:
 
 The last program randomly inserts atoms in the membrane, the other two then attach 2nd layer atom to it and fix the bonds, growing the membrane.
 
+If the membrane is damaged (by manually removing an atom from either layer) it is usually repaired successfully, although sometimes the agents can interfere with each other's work.
+
 Listing of all the programs used in the demo: [Demo.ulam:137](https://github.com/mngr777/UlamMembrane1/blob/master/Demo.ulam#L137).
 
 More details on how program tree is executed: [Exec.ulam:6](https://github.com/mngr777/UlamMembrane1/blob/master/Exec.ulam#L6).
