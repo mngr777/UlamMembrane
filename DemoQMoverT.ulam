@@ -2,43 +2,60 @@ local typedef BondStatus BS;
 
 /**
    Attach to a membrane atome and move it
-
-   Commented out for compatibility with 5.0.7:
-   ERROR: Incomplete NodeVarRef for type used with variable symbol name 'bond'.
  */
 quark DemoQMoverT(C2D.Dir cDIR) : QBondableT(2) + QMortal {
-  // @Override Void behave() {
-  //   if (attach()) move();
-  //   else die();
-  // }
+  @Override Void behave() {
+    if (attach()) move();
+    else die();
+  }
 
-  // Bool move() {
-  //   SwapHelper sh;
-  //   C2D origin;
-  //   return sh.swap(origin, origin.neighbor(cDIR));
-  // }
+  Bool move() {
+    SwapHelper sh;
+    C2D origin;
+    return sh.swap(origin, origin.neighbor(cDIR));
+  }
 
-  // Bool attach() {
-  //   AtomUtils au;
-  //   BondStatus bs;
-  //   BondUtils bu;
+  Bool attach() {
+    AtomUtils au;
+    BondStatus bs;
+    BondUtils bu;
 
-  //   QBond& bond = getBond(0);
-  //   if (bond.isAttached())
-  //     return true;
+    if (getBond(0).isAttached())
+      return true;
 
-  //   Package pkg;
-  //   Membrane membrane;
-  //   WindowServices ws;
-  //   ws.reset(1, 2);
-  //   if (!ws.scan(au.getType(pkg), au.getType(membrane)))
-  //     return false;
+    Package pkg;
+    Membrane membrane;
+    WindowServices ws;
+    ws.reset(1, 2);
+    if (!ws.scan(au.getType(pkg), au.getType(membrane)))
+      return false;
 
-  //   SiteNum site = ws.getPick(0);
-  //   if (site == SiteNum.maxof)
-  //     site = ws.getPick(1);
+    SiteNum site = ws.getPick(0);
+    if (site == SiteNum.maxof)
+      site = ws.getPick(1);
 
-  //   BS.Status status = bu.attach(0, 0, site, BondUtils.cCOMMON);
-  //   return bs.isOk(status);
-  // }
+    BS.Status status = bu.attach(0, 0, site, BondUtils.cCOMMON);
+    return bs.isOk(status);
+  }
 }
+
+/**
+   \symbol MS
+ */
+element DemoMoverSouth : DemoQMoverT(0) {}
+
+/**
+   \symbol ME
+ */
+element DemoMoverEast : DemoQMoverT(2) {}
+
+/**
+   \symbol MN
+ */
+element DemoMoverNorth : DemoQMoverT(4) {}
+
+/**
+   \symbol MW
+ */
+element DemoMoverWest : DemoQMoverT(6) {}
+

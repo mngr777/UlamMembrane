@@ -476,24 +476,3 @@ transient Demo_SequenceData {
     return arity;
   }
 }
-
-
-// /**
-//    \symbol MS
-//  */
-// element DemoMoverSouth : DemoQMoverT(0) {}
-
-// /**
-//    \symbol ME
-//  */
-// element DemoMoverEast : DemoQMoverT(2) {}
-
-// /**
-//    \symbol MN
-//  */
-// element DemoMoverNorth : DemoQMoverT(4) {}
-
-// /**
-//    \symbol MW
-//  */
-// element DemoMoverWest : DemoQMoverT(6) {}
