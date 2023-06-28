@@ -1,0 +1,18 @@
+/**
+   \symbol DT
+   \color #caf7b7
+ */
+element DemoTestSequenceBuilder + QBondableT(1) + QMortal {
+  Unsigned mCount = 20;
+
+  @Override Void behave() {
+    if (mCount == 0u) {
+      die();
+      return;
+    }
+
+    SequenceBuilder builder;
+    if (builder.buildNext(self, 0, PackageData.cNO_DATA, PackageData.cNO_DATA))
+      mCount--;
+  }
+}
