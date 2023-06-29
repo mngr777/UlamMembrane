@@ -61,6 +61,12 @@ transient EventWindowMisc {
     return ws.getPick();
   }
 
+  SiteNum findEmptySiteAroundOrient(SiteNum site, SiteNum siteOther, Radius first, Radius last, Orientation orientation) {
+    C2D coord = ew.getCoordRaw(site);
+    C2D coordOther = ew.getCoordRaw(siteOther);
+    return findEmptySiteAroundOrient(coord, coordOther, first, last, orientation);
+  }
+
   SiteNum findEmptySiteAroundOrient(C2D coord, C2D coordOther, Radius first, Radius last, Orientation orientation) {
     WindowServices ws;
     ws.reset(0, 4); // scan through all window sites

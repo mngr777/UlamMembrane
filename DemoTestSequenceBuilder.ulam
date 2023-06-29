@@ -2,7 +2,7 @@
    \symbol DT
    \color #caf7b7
  */
-element DemoTestSequenceBuilder + QBondableT(1) + QMortal {
+element DemoTestSequenceBuilder : QBondableT(1) + QMortal {
   Unsigned mCount = 20;
 
   @Override Void behave() {
