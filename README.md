@@ -10,12 +10,15 @@ Hardcoded parts are building program trees (`TreeBuilder` element) and setting i
 YouTube videos:
 * setting up, bootstrapping, starting to build: [video 1](https://www.youtube.com/watch?v=8uURK0usDrE);
 * completing the membrane: [video 2](https://www.youtube.com/watch?v=Js69ZdZKyHQ)
+* starting multiple cells with `DemoMultiple` element: [video 3](https://www.youtube.com/watch?v=UBMUjet2xU0)
 
 # Building and running
 On Ubuntu, intstall `ulam` package (it contains both ULAM and MFM) from PPA, see [ULAM Tutorial](https://github.com/elenasa/ULAM/wiki/Ulam-Programming-Language).  
 Or install ULAM and MFM from source: http://robust.cs.unm.edu/doku.php?id=dev:install_ulam. Note that for `develop` branch, `Makefile.local.mk` should use `$ULAM_ROOT_DIR` instead of `$ROOT_DIR`.
 
-After that, running `make` in repo directory will compile `*.ulam` source files and run the result in MFM. Place a single `Demo` atom to start the demo.
+After that, running `make` in repo directory will compile `*.ulam` source files and run the result in MFM.
+
+Place a single `Demo` (white `De`) atom to start the demo. To start with multiple cells place `DemoMultiple` (white `DM`) atom.
 
 # Setting initial conditions
 ![Overview](images/init.png)
