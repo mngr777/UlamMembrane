@@ -1,0 +1,210 @@
+local typedef EventWindow.SiteNum SiteNum;
+
+/**
+   Seeds the whole available grid space with Demo atoms.
+
+   * First, probes are sent in diagonal directions to check if there's enough
+     space for Demo to build a membrane.
+   * Then copies of DemoMultiple are sent out; when copy DM is moving to a new
+     position, it will delete itself if it sees a non-empty site;
+   * Then DemoMultiple turns into Demo itself.
+
+   \symbol DM
+ */
+element DemoMultiple : QStateT(3) + QMortal {
+  typedef C2D.Dir Dir;
+  typedef XTimer(3, 4, 2) Timer;
+
+  constant State cSTATE_MOVE            = 0;
+  constant State cSTATE_SEND_PROBES     = 2;
+  constant State cSTATE_WAIT_FOR_PROBES = 3;
+  constant State cSTATE_MULTIPLY        = 1;
+  constant State cSTATE_WAIT_ON_FAILURE = 4;
+  constant State cSTATE_REPLACE         = 5;
+
+  constant Unsigned cSTEP_NUM = DemoInitialMembraneBuilder.cTOTAL_SIDE_LENGTH + 12;
+
+  Dir mDir = 0;
+  Unsigned mCount = 0;
+  Timer mTimer;
+  Bool mCanStart = true;
+
+  @Override Void behave() {
+    if (isState(cSTATE_MOVE)) {
+      move();
+    } else if (isState(cSTATE_SEND_PROBES)) {
+      sendProbes();
+    } else if (isState(cSTATE_WAIT_FOR_PROBES)) {
+      waitForProbes();
+    } else if (isState(cSTATE_MULTIPLY)) {
+      multiply();
+    } else if (isState(cSTATE_REPLACE)) {
+      replace();
+    } else if (isState(cSTATE_WAIT_ON_FAILURE)) {
+      waitOnFailure();
+    } else if (isState(cSTATE_DONE)) {
+      die();
+    }
+  }
+
+  Void move() {
+    if (mCount-- == 0u) {
+      setState(cSTATE_SEND_PROBES);
+      return;
+    }
+
+    if (cSTEP_NUM - mCount > 8u && isNonEmptyAtomAround()) {
+      // somebody else is around, one is enough
+      setState(cSTATE_DONE);
+      return;
+    }
+
+    // Move forward if possible
+    EventWindow ew;
+    C2D origin;
+    C2D coord = origin.neighbor(mDir);
+    if (!ew.isAccessible(coord)) {
+      setState(cSTATE_DONE);
+      return;
+    }
+    ew.swap(origin, coord);
+  }
+
+  Void multiply() {
+    if (!mTimer.countAlarm())
+      return;
+
+    // Make 4 children and send them in different directions
+    EventWindow ew;
+    C2D origin;
+    for (Int i = 0; i <= 6; i += 2) {
+      Dir dir = (Dir) i;
+
+      DemoMultiple child;
+      child.mDir = dir;
+      child.mCount = cSTEP_NUM;
+
+      ew[origin.neighbor(dir)] = child;
+    }
+
+    mCount = 0;
+    mTimer.reset();
+    setState(cSTATE_REPLACE);
+  }
+
+  Void sendProbes() {
+    EventWindow ew;
+
+    C2D origin;
+    for (Int i = 1; i <= 7; i += 2) {
+      C2D.Dir dir = (C2D.Dir) i;
+
+      DemoProbe probe;
+      probe.mDir = dir;
+      probe.mStepNum = DemoInitialMembraneBuilder.cTOTAL_SIDE_LENGTH / 2 + 1;
+      ew[origin.neighbor(dir)] = probe;
+    }
+
+    setState(cSTATE_WAIT_FOR_PROBES);
+  }
+
+  Void waitForProbes() {
+    EventWindow ew;
+
+    // Look for probes that returned
+    AtomUtils au;
+    DemoProbe probeTmp;
+    WindowServices ws;
+    ws.reset(1, 2);
+    if (!ws.scan(au.getType(probeTmp)))
+      return;
+    SiteNum site = ws.getPick();
+
+    DemoProbe& probe = (DemoProbe&) ew[site];
+    if (!probe.mIsDone)
+      return; // this one is just departing
+
+    // Get status and scrap the probe
+    mCanStart = mCanStart && probe.mSuccess;
+    Empty empty;
+    ew[site] = empty;
+
+    if (++mCount == 4u) {
+      // All probes returned
+      mCount = 0;
+      mTimer.reset();
+      if (mCanStart) {
+        setState(cSTATE_MULTIPLY);
+      } else {
+        setState(cSTATE_WAIT_ON_FAILURE);
+      }
+    }
+  }
+
+  Void waitOnFailure() {
+    if (!mTimer.countAlarm() && ++mCount >= 3u)
+      return;
+
+    setState(cSTATE_DONE);
+  }
+
+  Void replace() {
+    if (!mTimer.countAlarm())
+      return;
+
+    EventWindow ew;
+    Demo demo;
+    ew[0] = demo;
+  }
+
+  Bool isNonEmptyAtomAround() {
+    WindowServices ws;
+    ws.reset(1, 4);
+    return ws.scan(WindowServices.cNONEMPTY_SITES_HIT);
+  }
+}
+
+
+/**
+   \symbol Dp
+   \color #85c9e9
+ */
+element DemoProbe {
+  C2D.Dir mDir;
+
+  Unsigned mStepNum = 0;
+  Unsigned mCount = 0;
+  Bool mIsDone = false;
+  Bool mSuccess = true;
+
+  Void behave() {
+    if (mIsDone && mCount == 0u)
+      return;
+
+    EventWindow ew;
+
+    C2D origin;
+    C2D coord = origin.neighbor(mDir);
+
+    if (!mIsDone) {
+      if (mCount == mStepNum) {
+        // All sites are accessible, success
+        mIsDone = true;
+
+      } else if (!ew.isAccessible(coord)) {
+        mSuccess = false;
+        mIsDone = true;
+        if (mCount == 0u)
+          return;
+      }
+    }
+
+    if (mIsDone)
+      coord = -coord; // when done, go back to report
+
+    if (ew.isEmpty(coord)) {
+      mCount = !mIsDone ? mCount + 1u : mCount - 1u;
+      ew.swap(origin, coord);
+    }
+  }
+}
