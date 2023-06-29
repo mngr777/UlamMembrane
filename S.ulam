@@ -1,0 +1,16 @@
+/**
+   Starting element for T2 Tile
+
+   \color #fff
+   \radius 1
+   \symmetries all
+   \author Servei Sh.
+   \license lgpl
+*/
+element S {
+  Void behave() {
+    EventWindow ew;
+    DemoMultiple dm;
+    ew[0] = dm;
+  }
+}
