@@ -4,8 +4,9 @@
    \color #fff
    \radius 1
    \symmetries all
-   \author Servei Sh.
+   \author Sergei Sh.
    \license lgpl
+   \copyright 2023
 */
 element S {
   Void behave() {
