@@ -1,6 +1,4 @@
-/**
-   Starting element for T2 Tile
-
+/** Building 2-layer membrane.
    \color #fff
    \radius 1
    \symmetries all
